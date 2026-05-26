@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -80,7 +79,6 @@ import com.hightechif.swipecleaner.ui.component.SwipeableCard
 import com.hightechif.swipecleaner.ui.viewmodel.SwipeTab
 import com.hightechif.swipecleaner.ui.viewmodel.SwipeViewModel
 import org.koin.androidx.compose.koinViewModel
-import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -332,7 +330,10 @@ fun SwipeScreen(
                             badge = {
                                 if (uiState.deleteQueue.isNotEmpty()) {
                                     Badge(containerColor = Color(0xFFE91E63)) {
-                                        Text(text = uiState.deleteQueue.size.toString(), color = Color.White)
+                                        Text(
+                                            text = uiState.deleteQueue.size.toString(),
+                                            color = Color.White
+                                        )
                                     }
                                 }
                             }
@@ -409,7 +410,9 @@ fun SwipeScreen(
                                 currentIndex = uiState.currentIndex,
                                 onSwipeLeft = { viewModel.swipeLeft() },
                                 onSwipeRight = { viewModel.swipeRight() },
-                                onCardClick = { activeViewerUri = uiState.photoPool[uiState.currentIndex] }
+                                onCardClick = {
+                                    activeViewerUri = uiState.photoPool[uiState.currentIndex]
+                                }
                             )
                         }
                     }
@@ -523,9 +526,9 @@ fun SwipeContent(
 
         // Basic helper UI controls at bottom
         Text(
-            text = "◀ Swipe left to trash  |  Swipe right to keep  |  Tap to zoom ▶",
+            text = "◀ Swipe left to trash | Tap to zoom |  Swipe right to keep  ▶",
             color = Color.Gray,
-            fontSize = 13.sp,
+            fontSize = 10.sp,
             fontWeight = FontWeight.Normal,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -546,7 +549,7 @@ fun FullscreenImageViewer(
 
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         scale = (scale * zoomChange).coerceIn(1f, 5f)
-        
+
         // Clamp panning offsets to restrict image from panning off screen
         val maxOffsetX = (scale - 1f) * screenWidth / 2
         val maxOffsetY = (scale - 1f) * screenHeight / 2
@@ -753,9 +756,17 @@ fun SessionCompletedView(
                     Spacer(modifier = Modifier.height(20.dp))
                     SummaryRow(label = "Total Photos Reviewed", value = totalPoolSize.toString())
                     Spacer(modifier = Modifier.height(12.dp))
-                    SummaryRow(label = "Photos Kept", value = keptCount.toString(), color = Color(0xFF4CAF50))
+                    SummaryRow(
+                        label = "Photos Kept",
+                        value = keptCount.toString(),
+                        color = Color(0xFF4CAF50)
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
-                    SummaryRow(label = "Photos Marked for Deletion", value = deleteQueueSize.toString(), color = Color(0xFFE91E63))
+                    SummaryRow(
+                        label = "Photos Marked for Deletion",
+                        value = deleteQueueSize.toString(),
+                        color = Color(0xFFE91E63)
+                    )
                 }
             }
 
