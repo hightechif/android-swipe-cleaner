@@ -111,7 +111,7 @@ fun SwipeScreen(
         }
     }
 
-    // Milestone dialog alert every 20 swipes
+    // Milestone dialog alert every 50 swipes
     if (uiState.showMilestoneDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissMilestoneDialog() },

@@ -9,7 +9,6 @@ import com.hightechif.swipecleaner.data.repository.TrashedPhotosRepository
 import com.hightechif.swipecleaner.domain.usecase.ExecuteTrashRequestUseCase
 import com.hightechif.swipecleaner.domain.usecase.GetShuffledPhotoPoolUseCase
 import com.hightechif.swipecleaner.domain.usecase.MarkImageKeptUseCase
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -44,6 +43,10 @@ class SwipeViewModel(
     private val keptPhotosRepository: KeptPhotosRepository,
     private val trashedPhotosRepository: TrashedPhotosRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val MILESTONE_CHECKPOINT_NUMBER = 50
+    }
 
     private val _uiState = MutableStateFlow(SwipeUiState())
     val uiState: StateFlow<SwipeUiState> = _uiState.asStateFlow()
@@ -106,7 +109,7 @@ class SwipeViewModel(
             _uiState.update {
                 val nextIndex = it.currentIndex + 1
                 val newSwipeCount = it.sessionSwipeCount + 1
-                val triggerMilestone = newSwipeCount % 20 == 0
+                val triggerMilestone = newSwipeCount % MILESTONE_CHECKPOINT_NUMBER == 0
                 it.copy(
                     currentIndex = nextIndex,
                     keptCount = it.keptCount + 1,
@@ -129,7 +132,7 @@ class SwipeViewModel(
                 _uiState.update {
                     val nextIndex = it.currentIndex + 1
                     val newSwipeCount = it.sessionSwipeCount + 1
-                    val triggerMilestone = newSwipeCount % 20 == 0
+                    val triggerMilestone = newSwipeCount % MILESTONE_CHECKPOINT_NUMBER == 0
                     it.copy(
                         currentIndex = nextIndex,
                         sessionSwipeCount = newSwipeCount,
