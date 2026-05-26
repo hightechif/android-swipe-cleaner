@@ -83,10 +83,10 @@ The application SHALL provide a Trash Queue Screen/Tab displaying a grid layout 
 - **THEN** the application retains those photos in the Trash Queue tab and excludes them from the active Swipe Deck stack.
 
 ### Requirement: Milestone Swipe Prompts
-The application SHALL monitor the user's swiping progress and trigger a non-blocking check-in prompt after every 20 swipes.
+The application SHALL monitor the user's swiping progress and trigger a non-blocking check-in prompt after every 50 swipes.
 
 #### Scenario: Milestone Prompt Trigger
-- **WHEN** the sum of kept and deleted photos in the session reaches a multiple of 20
+- **WHEN** the sum of kept and deleted photos in the session reaches a multiple of 50
 - **THEN** the application displays a milestone prompt dialog.
 
 #### Scenario: Milestone Prompt Action - Review
