@@ -5,6 +5,7 @@ import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.core.net.toUri
 
 interface MediaStoreRepository {
     fun queryAllImageUris(): List<String>
@@ -57,7 +58,7 @@ class MediaStoreRepositoryImpl(
     override fun createTrashRequest(uris: List<String>): IntentSender? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val contentResolver = context.contentResolver
-            val uriList = uris.map { Uri.parse(it) }
+            val uriList = uris.map { it.toUri() }
             return try {
                 val pendingIntent = MediaStore.createTrashRequest(contentResolver, uriList, true)
                 pendingIntent.intentSender
@@ -75,7 +76,7 @@ class MediaStoreRepositoryImpl(
             var success = true
             for (uriStr in uris) {
                 try {
-                    val count = contentResolver.delete(Uri.parse(uriStr), null, null)
+                    val count = contentResolver.delete(uriStr.toUri(), null, null)
                     if (count <= 0) success = false
                 } catch (e: Exception) {
                     e.printStackTrace()

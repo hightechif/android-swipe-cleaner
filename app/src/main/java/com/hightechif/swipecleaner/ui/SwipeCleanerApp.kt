@@ -44,13 +44,7 @@ fun SwipeCleanerApp(
 
         composable(Screen.Swipe.route) {
             SwipeScreen(
-                viewModel = swipeViewModel,
-                onNavigateToKept = {
-                    navController.navigate(Screen.KeptPhotos.route)
-                },
-                onNavigateToCompletion = {
-                    navController.navigate(Screen.Completion.route)
-                }
+                viewModel = swipeViewModel
             )
         }
 
