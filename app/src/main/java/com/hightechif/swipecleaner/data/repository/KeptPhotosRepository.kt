@@ -9,6 +9,7 @@ interface KeptPhotosRepository {
     suspend fun getKeptPhotos(): List<KeptPhotoEntity>
     suspend fun insertKeptPhoto(uri: String)
     suspend fun clearAllKeptPhotos()
+    suspend fun deleteKeptPhoto(uri: String)
 }
 
 class KeptPhotosRepositoryImpl(
@@ -30,5 +31,9 @@ class KeptPhotosRepositoryImpl(
 
     override suspend fun clearAllKeptPhotos() {
         keptPhotoDao.deleteAllKeptPhotos()
+    }
+
+    override suspend fun deleteKeptPhoto(uri: String) {
+        keptPhotoDao.deleteKeptPhoto(uri)
     }
 }

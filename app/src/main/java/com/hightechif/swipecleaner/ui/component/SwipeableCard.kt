@@ -5,6 +5,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -40,6 +41,7 @@ fun SwipeableCard(
     imageUri: String,
     onSwipeLeft: () -> Unit,
     onSwipeRight: () -> Unit,
+    onCardClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
@@ -52,6 +54,11 @@ fun SwipeableCard(
     Card(
         modifier = modifier
             .fillMaxSize()
+            .pointerInput(imageUri) {
+                detectTapGestures(
+                    onTap = { onCardClick() }
+                )
+            }
             .pointerInput(imageUri) {
                 detectHorizontalDragGestures(
                     onDragEnd = {

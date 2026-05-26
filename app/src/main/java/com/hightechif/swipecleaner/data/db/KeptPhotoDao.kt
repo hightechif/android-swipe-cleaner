@@ -19,4 +19,7 @@ interface KeptPhotoDao {
 
     @Query("DELETE FROM kept_photos")
     suspend fun deleteAllKeptPhotos()
+
+    @Query("DELETE FROM kept_photos WHERE uri = :uri")
+    suspend fun deleteKeptPhoto(uri: String)
 }

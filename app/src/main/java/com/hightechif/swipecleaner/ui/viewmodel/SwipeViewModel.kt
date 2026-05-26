@@ -3,17 +3,27 @@ package com.hightechif.swipecleaner.ui.viewmodel
 import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hightechif.swipecleaner.data.db.KeptPhotoEntity
+import com.hightechif.swipecleaner.data.repository.KeptPhotosRepository
+import com.hightechif.swipecleaner.data.repository.TrashedPhotosRepository
 import com.hightechif.swipecleaner.domain.usecase.ExecuteTrashRequestUseCase
 import com.hightechif.swipecleaner.domain.usecase.GetShuffledPhotoPoolUseCase
 import com.hightechif.swipecleaner.domain.usecase.MarkImageKeptUseCase
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+enum class SwipeTab {
+    SWIPE, KEPT, TRASH
+}
 
 data class SwipeUiState(
     val photoPool: List<String> = emptyList(),
@@ -21,13 +31,18 @@ data class SwipeUiState(
     val deleteQueue: List<String> = emptyList(),
     val keptCount: Int = 0,
     val isLoading: Boolean = true,
-    val isSessionFinished: Boolean = false
+    val isSessionFinished: Boolean = false,
+    val activeTab: SwipeTab = SwipeTab.SWIPE,
+    val sessionSwipeCount: Int = 0,
+    val showMilestoneDialog: Boolean = false
 )
 
 class SwipeViewModel(
     private val getShuffledPhotoPoolUseCase: GetShuffledPhotoPoolUseCase,
     private val markImageKeptUseCase: MarkImageKeptUseCase,
-    private val executeTrashRequestUseCase: ExecuteTrashRequestUseCase
+    private val executeTrashRequestUseCase: ExecuteTrashRequestUseCase,
+    private val keptPhotosRepository: KeptPhotosRepository,
+    private val trashedPhotosRepository: TrashedPhotosRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SwipeUiState())
@@ -36,21 +51,40 @@ class SwipeViewModel(
     private val _trashEvent = MutableSharedFlow<IntentSender>()
     val trashEvent: SharedFlow<IntentSender> = _trashEvent.asSharedFlow()
 
+    // Observe the database-backed kept photos list in real time
+    val keptPhotos: StateFlow<List<KeptPhotoEntity>> = keptPhotosRepository.getKeptPhotosFlow()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     init {
-        loadPhotoPool()
+        viewModelScope.launch {
+            trashedPhotosRepository.getTrashedPhotosFlow().collect { entities ->
+                _uiState.update { state ->
+                    state.copy(deleteQueue = entities.map { it.uri })
+                }
+            }
+        }
+        loadPhotoPool(keepDeleteQueue = true)
     }
 
-    fun loadPhotoPool() {
+    fun loadPhotoPool(keepDeleteQueue: Boolean = true) {
         _uiState.update { it.copy(isLoading = true, isSessionFinished = false) }
         viewModelScope.launch {
             try {
+                if (!keepDeleteQueue) {
+                    trashedPhotosRepository.clearAllTrashedPhotos()
+                }
                 val pool = getShuffledPhotoPoolUseCase()
-                _uiState.update {
-                    it.copy(
+                _uiState.update { state ->
+                    state.copy(
                         photoPool = pool,
                         currentIndex = 0,
-                        deleteQueue = emptyList(),
                         keptCount = 0,
+                        sessionSwipeCount = 0,
+                        showMilestoneDialog = false,
                         isLoading = false,
                         isSessionFinished = pool.isEmpty()
                     )
@@ -71,9 +105,13 @@ class SwipeViewModel(
             markImageKeptUseCase(currentUri)
             _uiState.update {
                 val nextIndex = it.currentIndex + 1
+                val newSwipeCount = it.sessionSwipeCount + 1
+                val triggerMilestone = newSwipeCount % 20 == 0
                 it.copy(
                     currentIndex = nextIndex,
                     keptCount = it.keptCount + 1,
+                    sessionSwipeCount = newSwipeCount,
+                    showMilestoneDialog = triggerMilestone,
                     isSessionFinished = nextIndex >= it.photoPool.size
                 )
             }
@@ -85,14 +123,85 @@ class SwipeViewModel(
         if (state.currentIndex >= state.photoPool.size) return
 
         val currentUri = state.photoPool[state.currentIndex]
-        _uiState.update {
-            val nextIndex = it.currentIndex + 1
-            it.copy(
-                currentIndex = nextIndex,
-                deleteQueue = it.deleteQueue + currentUri,
-                isSessionFinished = nextIndex >= it.photoPool.size
-            )
+        viewModelScope.launch {
+            try {
+                trashedPhotosRepository.insertTrashedPhoto(currentUri)
+                _uiState.update {
+                    val nextIndex = it.currentIndex + 1
+                    val newSwipeCount = it.sessionSwipeCount + 1
+                    val triggerMilestone = newSwipeCount % 20 == 0
+                    it.copy(
+                        currentIndex = nextIndex,
+                        sessionSwipeCount = newSwipeCount,
+                        showMilestoneDialog = triggerMilestone,
+                        isSessionFinished = nextIndex >= it.photoPool.size
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
+    }
+
+    fun restoreFromTrash(uri: String) {
+        viewModelScope.launch {
+            try {
+                trashedPhotosRepository.deleteTrashedPhoto(uri)
+                _uiState.update { state ->
+                    val newPhotoPool = state.photoPool.toMutableList()
+                    val insertIndex = state.currentIndex.coerceIn(0, newPhotoPool.size)
+                    newPhotoPool.add(insertIndex, uri)
+                    state.copy(
+                        photoPool = newPhotoPool,
+                        sessionSwipeCount = (state.sessionSwipeCount - 1).coerceAtLeast(0),
+                        isSessionFinished = false
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun restoreFromKept(uri: String) {
+        viewModelScope.launch {
+            try {
+                keptPhotosRepository.deleteKeptPhoto(uri)
+                _uiState.update { state ->
+                    val newPhotoPool = state.photoPool.toMutableList()
+                    val insertIndex = state.currentIndex.coerceIn(0, newPhotoPool.size)
+                    newPhotoPool.add(insertIndex, uri)
+                    state.copy(
+                        keptCount = (state.keptCount - 1).coerceAtLeast(0),
+                        photoPool = newPhotoPool,
+                        sessionSwipeCount = (state.sessionSwipeCount - 1).coerceAtLeast(0),
+                        isSessionFinished = false
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun resetAllKeptPhotos() {
+        viewModelScope.launch {
+            try {
+                keptPhotosRepository.clearAllKeptPhotos()
+                loadPhotoPool(keepDeleteQueue = true)
+                _uiState.update { it.copy(activeTab = SwipeTab.SWIPE) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun setActiveTab(tab: SwipeTab) {
+        _uiState.update { it.copy(activeTab = tab) }
+    }
+
+    fun dismissMilestoneDialog() {
+        _uiState.update { it.copy(showMilestoneDialog = false) }
     }
 
     fun executeTrashRequest() {
@@ -106,7 +215,12 @@ class SwipeViewModel(
     }
 
     fun onTrashRequestCompleted() {
-        // Clear delete queue after triggering the trash system dialog
-        _uiState.update { it.copy(deleteQueue = emptyList()) }
+        viewModelScope.launch {
+            try {
+                trashedPhotosRepository.clearAllTrashedPhotos()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }
