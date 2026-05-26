@@ -46,7 +46,7 @@ fun SwipeableCard(
     val screenWidthPx = with(LocalDensity.current) { configuration.screenWidthDp.dp.toPx() }
     val swipeThreshold = screenWidthPx * 0.35f
 
-    val offsetX = remember { Animatable(0f) }
+    val offsetX = remember(imageUri) { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
     Card(

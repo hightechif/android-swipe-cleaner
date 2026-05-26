@@ -1,7 +1,6 @@
 package com.hightechif.swipecleaner.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -45,6 +44,9 @@ fun SwipeCleanerApp(
         composable(Screen.Swipe.route) {
             SwipeScreen(
                 viewModel = swipeViewModel,
+                onNavigateToKept = {
+                    navController.navigate(Screen.KeptPhotos.route)
+                },
                 onNavigateToCompletion = {
                     navController.navigate(Screen.Completion.route)
                 }

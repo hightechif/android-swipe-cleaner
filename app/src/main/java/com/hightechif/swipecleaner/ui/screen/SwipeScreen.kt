@@ -1,6 +1,7 @@
 package com.hightechif.swipecleaner.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,9 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +34,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun SwipeScreen(
+    onNavigateToKept: () -> Unit,
     onNavigateToCompletion: () -> Unit,
     viewModel: SwipeViewModel = koinViewModel()
 ) {
@@ -70,6 +74,7 @@ fun SwipeScreen(
                     )
                 }
             }
+
             uiState.photoPool.isEmpty() -> {
                 Column(
                     modifier = Modifier.padding(32.dp),
@@ -89,8 +94,80 @@ fun SwipeScreen(
                         textAlign = TextAlign.Center,
                         lineHeight = 22.sp
                     )
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // Action Buttons
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Move to Trash Button
+                        Button(
+                            onClick = { viewModel.executeTrashRequest() },
+                            enabled = uiState.deleteQueue.isNotEmpty(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFE91E63),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(0xFFE91E63).copy(alpha = 0.3f),
+                                disabledContentColor = Color.White.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Text(
+                                text = if (uiState.deleteQueue.isNotEmpty()) {
+                                    "Move ${uiState.deleteQueue.size} Photos to Trash"
+                                } else {
+                                    "No Photos to Delete"
+                                },
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // See Kept Photos Button
+                        Button(
+                            onClick = onNavigateToKept,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF6C63FF),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(
+                                text = "See Kept Photos",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Reset and restart
+                        OutlinedButton(
+                            onClick = onNavigateToKept,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(
+                                text = "Review Remaining Photos",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                 }
             }
+
             else -> {
                 SwipeContent(
                     photoPool = uiState.photoPool,
