@@ -9,11 +9,11 @@ SwipeCleaner is a simple, intuitive, and interactive Android application designe
 ## 🚀 Key Features
 
 - **Tinder-Style Swiping Gestures**: Smooth horizontal card dragging with interactive card rotation and color overlays (red tint for delete, green tint for keep).
-- **Safe Batch Trashing (Option B / Thread A)**: Left-swiped photos are held in an in-memory queue. Upon review completion, they are moved to the system trash via Android's `MediaStore.createTrashRequest` in a single OS confirmation dialog.
-- **Persistent Keep-State (Thread B)**: Right-swiped photos are saved in a local Room database. They are excluded from future random pool generations on app launches.
-- **Onboarding Permission Handling (Thread E)**: Verifies storage permissions at launch. Displays a clean, dedicated screen if permissions are missing, and transitions automatically once granted.
-- **Completion Stats & Celebration (Thread C)**: Displays reviewed stats and plays a celebratory confetti Lottie animation.
-- **Kept Photos Grid (Thread C)**: Lets users browse kept photos in a grid layout, with the option to reset all progress and start over.
+- **Safe Batch Trashing**: Left-swiped photos are staged in a local persistent Room database table. Upon completion or emptying, they are moved to the system trash via Android's `MediaStore.createTrashRequest` in a single OS confirmation dialog.
+- **Persistent Swipe Progress**: Both right-swiped (kept) and left-swiped (trashed) photo states are saved in local Room database tables, making the session staging queue persistent across application restarts.
+- **Onboarding Permission Handling**: Verifies storage permissions at launch. Displays a clean, dedicated screen if permissions are missing, and transitions automatically once granted.
+- **Completion Stats & Celebration**: Displays reviewed stats and plays a celebratory confetti Lottie animation.
+- **Kept Photos Grid**: Lets users browse kept photos in a grid layout, with the option to reset all progress and start over.
 
 ---
 
@@ -40,17 +40,15 @@ The project is structured following Clean Architecture and MVVM patterns:
 │                                                              │
 │  PermissionScreen   SwipeScreen   CompletionScreen           │
 │  KeptPhotosScreen                                            │
-│       │                  │               │                   │
-│  PermissionVM      SwipeViewModel  CompletionVM              │
-│                    KeptPhotosVM                              │
+│            │                             │                   │
+│      SwipeViewModel             KeptPhotosViewModel          │
 └────────────────────────┬─────────────────────────────────────┘
                          │ Kotlin Coroutines / Flow
 ┌────────────────────────▼─────────────────────────────────────┐
 │  DOMAIN LAYER (Use Cases)                                    │
 │                                                              │
-│  GetShuffledPhotoPoolUseCase  (excludes kept URIs)           │
+│  GetShuffledPhotoPoolUseCase  (excludes kept & trashed URIs) │
 │  MarkImageKeptUseCase         (persist to DB)                │
-│  MarkImageForDeletionUseCase  (add to in-memory queue)       │
 │  ExecuteTrashRequestUseCase   (MediaStore system dialog)     │
 │  GetKeptPhotosUseCase         (from DB)                      │
 │  ResetKeptPhotosUseCase       (clear DB)                     │
@@ -59,15 +57,14 @@ The project is structured following Clean Architecture and MVVM patterns:
 ┌────────────────────────▼─────────────────────────────────────┐
 │  DATA LAYER                                                  │
 │                                                              │
-│  ┌────────────────────────┐   ┌────────────────────────────┐ │
-│  │  MediaStoreRepository  │   │  KeptPhotosRepository      │ │
-│  │  - queryAllImageUris() │   │  - insert(uri)             │ │
-│  │  - createTrashRequest()│   │  - getAllKeptUris()         │ │
-│  │    → IntentSender      │   │  - deleteAll()             │ │
-│  └────────────────────────┘   └────────────────────────────┘ │
-│           │                              │                   │
-│    Android MediaStore              Room Database             │
-│    (ContentResolver)               (kept_photos.db)          │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌───────────────┐ │
+│  │MediaStoreReposit │ │KeptPhotosReposit │ │TrashedPhotosR │ │
+│  │-queryAllImageUri │ │-insertKeptPhoto  │ │-insertTrashed │ │
+│  │-createTrashReque │ │-getKeptPhotos    │ │-getTrashedPho │ │
+│  └──────────────────┘ └──────────────────┘ └───────────────┘ │
+│           │                    │                   │         │
+│   Android MediaStore      Room Database (kept_photos.db)     │
+│   (ContentResolver)       - kept_photos & trashed_photos     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -83,16 +80,16 @@ Check Permission
             │
             ▼
      Query MediaStore (All Images)
-     MINUS kept_photos table (Room DB)
+     MINUS kept_photos & trashed_photos tables
             │
             ▼
-     Shuffle remaining URIs → In-memory Queue
+     Shuffle remaining URIs → Active Card Stack
             │
        ┌────┴──────────────────────────────┐
        │           Swipe Screen            │
        ├───────────────────────────────────┤
        │ Swipe Right → Room DB (Kept)      │
-       │ Swipe Left  → In-memory List      │
+       │ Swipe Left  → Room DB (Trashed)   │
        └────┬──────────────────────────────┘
             │ (Queue Exhausted)
             ▼
