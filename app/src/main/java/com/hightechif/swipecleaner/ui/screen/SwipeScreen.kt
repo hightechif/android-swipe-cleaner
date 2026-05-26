@@ -89,10 +89,14 @@ fun SwipeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val keptPhotos by viewModel.keptPhotos.collectAsState()
 
-    var activeViewerUri by remember { mutableStateOf<String?>(null) }
-    var photoToResetFromKept by remember { mutableStateOf<String?>(null) }
-    var photoToRestoreFromTrash by remember { mutableStateOf<String?>(null) }
-    var showResetAllKeptDialog by remember { mutableStateOf(false) }
+    val (activeViewerUri, setActiveViewerUri) = remember { mutableStateOf<String?>(null) }
+    val (photoToResetFromKept, setPhotoToResetFromKept) = remember { mutableStateOf<String?>(null) }
+    val (photoToRestoreFromTrash, setPhotoToRestoreFromTrash) = remember {
+        mutableStateOf<String?>(
+            null
+        )
+    }
+    val (showResetAllKeptDialog, setShowResetAllKeptDialog) = remember { mutableStateOf(false) }
 
     // Activity launcher to execute MediaStore trash request dialog
     val trashLauncher = rememberLauncherForActivityResult(
@@ -164,7 +168,7 @@ fun SwipeScreen(
     // Undo dialog for kept item
     if (photoToResetFromKept != null) {
         AlertDialog(
-            onDismissRequest = { photoToResetFromKept = null },
+            onDismissRequest = { setPhotoToResetFromKept(null) },
             containerColor = Color(0xFF252538),
             title = {
                 Text(
@@ -184,15 +188,15 @@ fun SwipeScreen(
                 Button(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE91E63)),
                     onClick = {
-                        photoToResetFromKept?.let { viewModel.restoreFromKept(it) }
-                        photoToResetFromKept = null
+                        viewModel.restoreFromKept(photoToResetFromKept)
+                        setPhotoToResetFromKept(null)
                     }
                 ) {
                     Text("Reset", color = Color.White)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { photoToResetFromKept = null }) {
+                TextButton(onClick = { setPhotoToResetFromKept(null) }) {
                     Text("Cancel", color = Color.Gray)
                 }
             }
@@ -202,7 +206,7 @@ fun SwipeScreen(
     // Undo dialog for trash item
     if (photoToRestoreFromTrash != null) {
         AlertDialog(
-            onDismissRequest = { photoToRestoreFromTrash = null },
+            onDismissRequest = { setPhotoToRestoreFromTrash(null) },
             containerColor = Color(0xFF252538),
             title = {
                 Text(
@@ -222,15 +226,15 @@ fun SwipeScreen(
                 Button(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF)),
                     onClick = {
-                        photoToRestoreFromTrash?.let { viewModel.restoreFromTrash(it) }
-                        photoToRestoreFromTrash = null
+                        viewModel.restoreFromTrash(photoToRestoreFromTrash)
+                        setPhotoToRestoreFromTrash(null)
                     }
                 ) {
                     Text("Restore", color = Color.White)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { photoToRestoreFromTrash = null }) {
+                TextButton(onClick = { setPhotoToRestoreFromTrash(null) }) {
                     Text("Cancel", color = Color.Gray)
                 }
             }
@@ -240,7 +244,7 @@ fun SwipeScreen(
     // Reset all kept photos dialog
     if (showResetAllKeptDialog) {
         AlertDialog(
-            onDismissRequest = { showResetAllKeptDialog = false },
+            onDismissRequest = { setShowResetAllKeptDialog(false) },
             containerColor = Color(0xFF252538),
             title = {
                 Text(
@@ -260,7 +264,7 @@ fun SwipeScreen(
                 Button(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE91E63)),
                     onClick = {
-                        showResetAllKeptDialog = false
+                        setShowResetAllKeptDialog(false)
                         viewModel.resetAllKeptPhotos()
                     }
                 ) {
@@ -268,7 +272,7 @@ fun SwipeScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetAllKeptDialog = false }) {
+                TextButton(onClick = { setShowResetAllKeptDialog(false) }) {
                     Text("Cancel", color = Color.Gray)
                 }
             }
@@ -410,7 +414,7 @@ fun SwipeScreen(
                                 onSwipeLeft = { viewModel.swipeLeft() },
                                 onSwipeRight = { viewModel.swipeRight() },
                                 onCardClick = {
-                                    activeViewerUri = uiState.photoPool[uiState.currentIndex]
+                                    setActiveViewerUri(uiState.photoPool[uiState.currentIndex])
                                 }
                             )
                         }
@@ -420,15 +424,15 @@ fun SwipeScreen(
                 SwipeTab.KEPT -> {
                     KeptTabContent(
                         keptPhotos = keptPhotos,
-                        onResetPhoto = { photoToResetFromKept = it },
-                        onResetAll = { showResetAllKeptDialog = true }
+                        onResetPhoto = { setPhotoToResetFromKept(it) },
+                        onResetAll = { setShowResetAllKeptDialog(true) }
                     )
                 }
 
                 SwipeTab.TRASH -> {
                     TrashTabContent(
                         deleteQueue = uiState.deleteQueue,
-                        onRestorePhoto = { photoToRestoreFromTrash = it },
+                        onRestorePhoto = { setPhotoToRestoreFromTrash(it) },
                         onExecuteTrash = { viewModel.executeTrashRequest() }
                     )
                 }
@@ -438,7 +442,7 @@ fun SwipeScreen(
             activeViewerUri?.let { uri ->
                 FullscreenImageViewer(
                     imageUri = uri,
-                    onDismiss = { activeViewerUri = null }
+                    onDismiss = { setActiveViewerUri(null) }
                 )
             }
         }
