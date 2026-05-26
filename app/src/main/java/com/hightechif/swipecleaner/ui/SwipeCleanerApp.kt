@@ -34,6 +34,7 @@ fun SwipeCleanerApp(
         composable(Screen.Permission.route) {
             PermissionScreen(
                 onPermissionGranted = {
+                    swipeViewModel.loadPhotoPool()
                     navController.navigate(Screen.Swipe.route) {
                         popUpTo(Screen.Permission.route) { inclusive = true }
                     }
