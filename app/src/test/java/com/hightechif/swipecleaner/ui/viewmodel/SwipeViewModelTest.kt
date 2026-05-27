@@ -4,6 +4,9 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.hightechif.swipecleaner.data.repository.KeptPhotosRepository
 import com.hightechif.swipecleaner.data.repository.MediaStoreRepository
 import com.hightechif.swipecleaner.data.repository.TrashedPhotosRepository
+import com.hightechif.swipecleaner.data.repository.MediaImage
+import com.hightechif.swipecleaner.data.db.KeptPhotoEntity
+import com.hightechif.swipecleaner.data.db.TrashedPhotoEntity
 import com.hightechif.swipecleaner.domain.usecase.ExecuteTrashRequestUseCase
 import com.hightechif.swipecleaner.domain.usecase.GetShuffledPhotoPoolUseCase
 import com.hightechif.swipecleaner.domain.usecase.MarkImageKeptUseCase
@@ -190,5 +193,77 @@ class SwipeViewModelTest {
             "Session should not be finished after restore",
             vm.uiState.value.isSessionFinished
         )
+    }
+
+    @Test
+    fun albums_computedCorrectlyFromUnreviewedPhotos() = runTest {
+        val mediaImages = listOf(
+            MediaImage("content://media/a1", "a", "Album A"),
+            MediaImage("content://media/a2", "a", "Album A"),
+            MediaImage("content://media/b1", "b", "Album B"),
+            MediaImage("content://media/b2", "b", "Album B"),
+            MediaImage("content://media/b3", "b", "Album B")
+        )
+        every { mediaStoreRepository.queryAllMediaImages() } returns mediaImages
+
+        val keptPhotosList = listOf(
+            KeptPhotoEntity("content://media/a1", 1000L)
+        )
+        every { keptPhotosRepository.getKeptPhotosFlow() } returns flowOf(keptPhotosList)
+
+        val trashedPhotosList = listOf(
+            TrashedPhotoEntity("content://media/b1", 2000L),
+            TrashedPhotoEntity("content://media/b2", 3000L)
+        )
+        every { trashedPhotosRepository.getTrashedPhotosFlow() } returns flowOf(trashedPhotosList)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val computedAlbums = vm.uiState.value.albums
+        assertEquals(2, computedAlbums.size)
+
+        val albumA = computedAlbums.find { it.id == "a" }
+        val albumB = computedAlbums.find { it.id == "b" }
+
+        assertTrue(albumA != null)
+        assertEquals("Album A", albumA?.name)
+        assertEquals("content://media/a2", albumA?.coverPhotoUri)
+        assertEquals(1, albumA?.photoCount)
+
+        assertTrue(albumB != null)
+        assertEquals("Album B", albumB?.name)
+        assertEquals("content://media/b3", albumB?.coverPhotoUri)
+        assertEquals(1, albumB?.photoCount)
+    }
+
+    @Test
+    fun albums_excludesFullyReviewedAlbums() = runTest {
+        val mediaImages = listOf(
+            MediaImage("content://media/a1", "a", "Album A"),
+            MediaImage("content://media/b1", "b", "Album B")
+        )
+        every { mediaStoreRepository.queryAllMediaImages() } returns mediaImages
+
+        val keptPhotosList = listOf(
+            KeptPhotoEntity("content://media/a1", 1000L)
+        )
+        every { keptPhotosRepository.getKeptPhotosFlow() } returns flowOf(keptPhotosList)
+        every { trashedPhotosRepository.getTrashedPhotosFlow() } returns flowOf(emptyList())
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        val computedAlbums = vm.uiState.value.albums
+        assertEquals(1, computedAlbums.size)
+
+        val albumA = computedAlbums.find { it.id == "a" }
+        val albumB = computedAlbums.find { it.id == "b" }
+
+        assertTrue(albumA == null)
+        assertTrue(albumB != null)
+        assertEquals("Album B", albumB?.name)
+        assertEquals("content://media/b1", albumB?.coverPhotoUri)
+        assertEquals(1, albumB?.photoCount)
     }
 }

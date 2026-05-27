@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -79,6 +80,42 @@ class SwipeViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            combine(
+                _mediaImages,
+                keptPhotos,
+                trashedPhotosRepository.getTrashedPhotosFlow()
+            ) { mediaImagesList, keptList, trashedList ->
+                val keptUris = keptList.map { it.uri }.toSet()
+                val trashedUris = trashedList.map { it.uri }.toSet()
+
+                val albumsMap = mutableMapOf<String, AlbumHelper>()
+                for (image in mediaImagesList) {
+                    val isReviewed = image.uri in keptUris || image.uri in trashedUris
+                    if (!isReviewed) {
+                        val helper = albumsMap.getOrPut(image.bucketId) {
+                            AlbumHelper(
+                                id = image.bucketId,
+                                name = image.bucketName,
+                                coverPhotoUri = image.uri,
+                                count = 0
+                            )
+                        }
+                        helper.count++
+                    }
+                }
+                albumsMap.values.map {
+                    Album(
+                        id = it.id,
+                        name = it.name,
+                        coverPhotoUri = it.coverPhotoUri,
+                        photoCount = it.count
+                    )
+                }.sortedBy { it.name }
+            }.collect { albumsList ->
+                _uiState.update { it.copy(albums = albumsList) }
+            }
+        }
         loadAlbums()
         loadMediaImages()
         loadPhotoPool()
@@ -116,14 +153,7 @@ class SwipeViewModel(
     }
 
     fun loadAlbums() {
-        viewModelScope.launch {
-            try {
-                val albumsList = mediaStoreRepository.queryAllAlbums()
-                _uiState.update { it.copy(albums = albumsList) }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        loadMediaImages()
     }
 
     fun loadMediaImages() {
@@ -267,3 +297,10 @@ class SwipeViewModel(
         }
     }
 }
+
+private data class AlbumHelper(
+    val id: String,
+    val name: String,
+    val coverPhotoUri: String,
+    var count: Int
+)
