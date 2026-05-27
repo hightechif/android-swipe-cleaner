@@ -78,6 +78,14 @@ The application SHALL provide a Trash Queue Screen/Tab displaying a grid layout 
 - **WHEN** the user taps the "Delete Photos" button in the Trash tab
 - **THEN** the application prompts the MediaStore system trash request dialog to delete all photos in the delete queue.
 
+#### Scenario: Delete All Trash Photos Accepted
+- **WHEN** the user confirms and allows the MediaStore system trash request dialog
+- **THEN** the application receives a successful activity result and clears the local delete database table.
+
+#### Scenario: Delete All Trash Photos Cancelled or Denied
+- **WHEN** the user denies or cancels the MediaStore system trash request dialog
+- **THEN** the application receives a cancelled activity result, preserves the local delete database table, and does not clear the delete queue.
+
 #### Scenario: Trash Queue Persistent Across Restart
 - **WHEN** the user restarts the application after marking photos for deletion
 - **THEN** the application retains those photos in the Trash Queue tab and excludes them from the active Swipe Deck stack.
