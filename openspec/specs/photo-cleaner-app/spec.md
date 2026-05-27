@@ -15,7 +15,7 @@ The application SHALL check for storage permissions (`READ_MEDIA_IMAGES` and `RE
 - **THEN** the application navigates directly to the Swipe Screen.
 
 ### Requirement: Swipe Screen Interface
-The Swipe Screen SHALL display a stack containing the current photo and preloaded subsequent photos, hosted within a Scaffold containing a Bottom Navigation Bar. The top card SHALL support horizontal drag gestures to keep or delete, and tap gestures to open a Fullscreen Image Viewer overlay. The Bottom Navigation Bar SHALL show badges with count metrics for Kept and Trash tabs.
+The Swipe Screen SHALL display a stack containing the current photo and preloaded subsequent photos, hosted within a Scaffold containing a Bottom Navigation Bar. The top card SHALL support horizontal drag gestures to keep or delete, and tap gestures to open a Fullscreen Image Viewer overlay. The Bottom Navigation Bar SHALL show badges with count metrics for Kept and Trash tabs. The Swipe Screen SHALL also provide a dropdown/selector to filter the active review stack by a specific folder (album) or show all photos.
 
 #### Scenario: Swipe Right to Keep
 - **WHEN** the user drags the photo card right past the threshold and releases it
@@ -37,6 +37,10 @@ The Swipe Screen SHALL display a stack containing the current photo and preloade
 - **WHEN** the user taps a tab in the bottom navigation bar
 - **THEN** the application switches the active screen view to the corresponding tab (Swipe Deck, Kept Photos, or Trash Queue).
 
+#### Scenario: Filter Swipe Deck by Folder
+- **WHEN** the user selects a specific folder/album from the folder selection dropdown on the Swipe screen
+- **THEN** the application reloads the swipe photo pool containing only the photos inside that folder, excluding already reviewed photos, and resets the swipe stack to the first index.
+
 ### Requirement: Completion Screen Statistics and Celebration
 When the photo pool is exhausted, the application SHALL transition to a Completion Screen. The Completion Screen SHALL display the session stats (total reviewed, total marked for deletion) and SHALL play a celebratory Lottie confetti animation regardless of the outcome of the deletion dialog.
 
@@ -49,14 +53,26 @@ When the photo pool is exhausted, the application SHALL transition to a Completi
 - **THEN** the application reloads the photo pool, filters out all photos currently in the delete queue, and preserves the delete queue list.
 
 ### Requirement: Kept Photos Screen
-The application SHALL provide a Kept Photos Screen/Tab displaying a grid layout of all photos currently marked as kept in the database, allowing users to restore individual photos or all kept photos back into the active swipe stack.
+The application SHALL provide a Kept Photos Screen/Tab displaying a grid layout of photos currently marked as kept in the database, allowing users to restore individual photos or all kept photos back into the active swipe stack. The screen SHALL support switching view modes between a flat list of all kept photos and a grouped folder list.
 
 #### Scenario: Open Kept Photos Grid
 - **WHEN** the user requests to see kept photos by tapping the Kept Photos tab
 - **THEN** the application displays a grid view containing all kept photo images from the database.
 
-#### Scenario: Reset Single Kept Photo
-- **WHEN** the user taps a kept photo in the grid and confirms reset
+#### Scenario: Switch Kept View to Albums
+- **WHEN** the user selects "Kept Photos Albums" from the kept view mode dropdown
+- **THEN** the application displays a grid of folder items, where each item shows the folder name, a cover photo from the kept photos in that folder, and the count of kept photos in that folder.
+
+#### Scenario: Drill Down into Kept Album
+- **WHEN** the user selects a folder item from the folder grid
+- **THEN** the application displays a grid showing only the kept photos belonging to that folder, along with a back navigation button.
+
+#### Scenario: Zoom Kept Photo on Tap
+- **WHEN** the user performs a single tap on a kept photo in any view
+- **THEN** the application opens the Fullscreen Image Viewer overlay allowing them to zoom and pan.
+
+#### Scenario: Reset Kept Photo on Long Press
+- **WHEN** the user performs a long press on a kept photo and confirms the reset dialog
 - **THEN** the application removes the photo from the kept database, inserts it back into the active photo pool at the current index, and decrements the kept count.
 
 #### Scenario: Reset All Kept Photos

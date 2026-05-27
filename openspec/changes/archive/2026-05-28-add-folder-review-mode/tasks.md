@@ -11,6 +11,7 @@
 
 - [x] 3.1 Implement the interactive folder selector button and dialog/sheet in [SwipeScreen.kt](file:///Users/ridhanfadhilah/Public/Fadhil/mobile/android/github/SwipeCleaner/app/src/main/java/com/hightechif/swipecleaner/ui/screen/SwipeScreen.kt)
 - [x] 3.2 Update Swipe header layout to display the folder selection, and trigger photo pool reload on change
+- [x] 3.3 Hoist App Header and folder selection UI to the top-level of the Swipe Screen tab to keep it visible in all states
 
 ## 4. Kept Screen UI Updates
 
