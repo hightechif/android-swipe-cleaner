@@ -1,5 +1,6 @@
 package com.hightechif.swipecleaner.ui.screen
 
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,8 +55,10 @@ fun CompletionScreen(
     // Activity launcher to execute MediaStore trash request dialog
     val trashLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { _ ->
-        viewModel.onTrashRequestCompleted()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            viewModel.onTrashRequestCompleted()
+        }
     }
 
     LaunchedEffect(Unit) {
