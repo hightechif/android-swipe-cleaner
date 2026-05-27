@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.hightechif.swipecleaner.data.db.KeptPhotoEntity
 import com.hightechif.swipecleaner.data.repository.KeptPhotosRepository
 import com.hightechif.swipecleaner.data.repository.TrashedPhotosRepository
+import com.hightechif.swipecleaner.data.repository.MediaStoreRepository
+import com.hightechif.swipecleaner.data.repository.Album
+import com.hightechif.swipecleaner.data.repository.MediaImage
 import com.hightechif.swipecleaner.domain.usecase.ExecuteTrashRequestUseCase
 import com.hightechif.swipecleaner.domain.usecase.GetShuffledPhotoPoolUseCase
 import com.hightechif.swipecleaner.domain.usecase.MarkImageKeptUseCase
@@ -33,7 +36,9 @@ data class SwipeUiState(
     val isSessionFinished: Boolean = false,
     val activeTab: SwipeTab = SwipeTab.SWIPE,
     val sessionSwipeCount: Int = 0,
-    val showMilestoneDialog: Boolean = false
+    val showMilestoneDialog: Boolean = false,
+    val albums: List<Album> = emptyList(),
+    val selectedAlbum: Album? = null
 )
 
 class SwipeViewModel(
@@ -41,7 +46,8 @@ class SwipeViewModel(
     private val markImageKeptUseCase: MarkImageKeptUseCase,
     private val executeTrashRequestUseCase: ExecuteTrashRequestUseCase,
     private val keptPhotosRepository: KeptPhotosRepository,
-    private val trashedPhotosRepository: TrashedPhotosRepository
+    private val trashedPhotosRepository: TrashedPhotosRepository,
+    private val mediaStoreRepository: MediaStoreRepository
 ) : ViewModel() {
 
     companion object {
@@ -53,6 +59,9 @@ class SwipeViewModel(
 
     private val _trashEvent = MutableSharedFlow<IntentSender>()
     val trashEvent: SharedFlow<IntentSender> = _trashEvent.asSharedFlow()
+
+    private val _mediaImages = MutableStateFlow<List<MediaImage>>(emptyList())
+    val mediaImages: StateFlow<List<MediaImage>> = _mediaImages.asStateFlow()
 
     // Observe the database-backed kept photos list in real time
     val keptPhotos: StateFlow<List<KeptPhotoEntity>> = keptPhotosRepository.getKeptPhotosFlow()
@@ -70,6 +79,8 @@ class SwipeViewModel(
                 }
             }
         }
+        loadAlbums()
+        loadMediaImages()
         loadPhotoPool(keepDeleteQueue = true)
     }
 
@@ -80,7 +91,8 @@ class SwipeViewModel(
                 if (!keepDeleteQueue) {
                     trashedPhotosRepository.clearAllTrashedPhotos()
                 }
-                val pool = getShuffledPhotoPoolUseCase()
+                val selectedAlbumId = _uiState.value.selectedAlbum?.id
+                val pool = getShuffledPhotoPoolUseCase(selectedAlbumId)
                 _uiState.update { state ->
                     state.copy(
                         photoPool = pool,
@@ -92,9 +104,38 @@ class SwipeViewModel(
                         isSessionFinished = pool.isEmpty()
                     )
                 }
+                loadAlbums()
+                loadMediaImages()
             } catch (e: Exception) {
                 e.printStackTrace()
                 _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    fun selectAlbum(album: Album?) {
+        _uiState.update { it.copy(selectedAlbum = album) }
+        loadPhotoPool(keepDeleteQueue = true)
+    }
+
+    fun loadAlbums() {
+        viewModelScope.launch {
+            try {
+                val albumsList = mediaStoreRepository.queryAllAlbums()
+                _uiState.update { it.copy(albums = albumsList) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadMediaImages() {
+        viewModelScope.launch {
+            try {
+                val images = mediaStoreRepository.queryAllMediaImages()
+                _mediaImages.value = images
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -118,6 +159,7 @@ class SwipeViewModel(
                     isSessionFinished = nextIndex >= it.photoPool.size
                 )
             }
+            loadMediaImages() // refresh kept mapping
         }
     }
 
@@ -181,6 +223,7 @@ class SwipeViewModel(
                         isSessionFinished = false
                     )
                 }
+                loadMediaImages() // refresh kept mapping
             } catch (e: Exception) {
                 e.printStackTrace()
             }

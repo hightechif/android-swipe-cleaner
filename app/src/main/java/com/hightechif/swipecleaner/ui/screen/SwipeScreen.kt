@@ -4,9 +4,11 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -21,11 +23,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -38,6 +46,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -77,6 +87,7 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.hightechif.swipecleaner.data.db.KeptPhotoEntity
+import com.hightechif.swipecleaner.data.repository.MediaImage
 import com.hightechif.swipecleaner.ui.component.SwipeableCard
 import com.hightechif.swipecleaner.ui.viewmodel.SwipeTab
 import com.hightechif.swipecleaner.ui.viewmodel.SwipeViewModel
@@ -98,6 +109,8 @@ fun SwipeScreen(
         )
     }
     val (showResetAllKeptDialog, setShowResetAllKeptDialog) = remember { mutableStateOf(false) }
+    val (showAlbumSelectorDialog, setShowAlbumSelectorDialog) = remember { mutableStateOf(false) }
+    val mediaImages by viewModel.mediaImages.collectAsState()
 
     // Activity launcher to execute MediaStore trash request dialog
     val trashLauncher = rememberLauncherForActivityResult(
@@ -113,6 +126,106 @@ fun SwipeScreen(
             val request = IntentSenderRequest.Builder(intentSender).build()
             trashLauncher.launch(request)
         }
+    }
+
+    if (showAlbumSelectorDialog) {
+        AlertDialog(
+            onDismissRequest = { setShowAlbumSelectorDialog(false) },
+            containerColor = Color(0xFF252538),
+            title = {
+                Text(
+                    text = "Select Folder",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.selectAlbum(null)
+                                    setShowAlbumSelectorDialog(false)
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .background(
+                                        Color(0xFF6C63FF).copy(alpha = 0.2f),
+                                        RoundedCornerShape(8.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Collections,
+                                    contentDescription = "All Photos",
+                                    tint = Color(0xFF6C63FF)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "All Photos",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+                    }
+
+                    items(uiState.albums) { album ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.selectAlbum(album)
+                                    setShowAlbumSelectorDialog(false)
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Image(
+                                painter = rememberAsyncImagePainter(model = album.coverPhotoUri),
+                                contentDescription = album.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = album.name,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                                Text(
+                                    text = "${album.photoCount} photos",
+                                    color = Color.Gray,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { setShowAlbumSelectorDialog(false) }) {
+                    Text("Close", color = Color.Gray)
+                }
+            }
+        )
     }
 
     // Milestone dialog alert every 50 swipes
@@ -414,6 +527,8 @@ fun SwipeScreen(
                             SwipeContent(
                                 photoPool = uiState.photoPool,
                                 currentIndex = uiState.currentIndex,
+                                selectedAlbumName = uiState.selectedAlbum?.name ?: "All Photos",
+                                onSelectFolderClick = { setShowAlbumSelectorDialog(true) },
                                 onSwipeLeft = { viewModel.swipeLeft() },
                                 onSwipeRight = { viewModel.swipeRight() },
                                 onCardClick = {
@@ -427,7 +542,9 @@ fun SwipeScreen(
                 SwipeTab.KEPT -> {
                     KeptTabContent(
                         keptPhotos = keptPhotos,
-                        onResetPhoto = { setPhotoToResetFromKept(it) },
+                        mediaImages = mediaImages,
+                        onPhotoClick = { setActiveViewerUri(it) },
+                        onPhotoLongClick = { setPhotoToResetFromKept(it) },
                         onResetAll = { setShowResetAllKeptDialog(true) }
                     )
                 }
@@ -456,6 +573,8 @@ fun SwipeScreen(
 fun SwipeContent(
     photoPool: List<String>,
     currentIndex: Int,
+    selectedAlbumName: String,
+    onSelectFolderClick: () -> Unit,
     onSwipeLeft: () -> Unit,
     onSwipeRight: () -> Unit,
     onCardClick: () -> Unit
@@ -482,6 +601,30 @@ fun SwipeContent(
                 letterSpacing = 1.sp
             )
             Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF252538))
+                    .clickable { onSelectFolderClick() }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = selectedAlbumName,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Select Folder",
+                    tint = Color.LightGray,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Progress: $currentIndex / $totalCount",
                 color = Color.LightGray,
@@ -832,12 +975,67 @@ fun SessionCompletedView(
     }
 }
 
+enum class KeptViewMode {
+    ALL_PHOTOS,
+    ALBUMS
+}
+
+data class ResolvedKeptPhoto(
+    val uri: String,
+    val keptAt: Long,
+    val bucketId: String,
+    val bucketName: String
+)
+
+data class KeptAlbum(
+    val id: String,
+    val name: String,
+    val coverPhotoUri: String,
+    val photoCount: Int,
+    val photos: List<ResolvedKeptPhoto>
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KeptTabContent(
     keptPhotos: List<KeptPhotoEntity>,
-    onResetPhoto: (String) -> Unit,
+    mediaImages: List<MediaImage>,
+    onPhotoClick: (String) -> Unit,
+    onPhotoLongClick: (String) -> Unit,
     onResetAll: () -> Unit
 ) {
+    var keptViewMode by remember { mutableStateOf(KeptViewMode.ALL_PHOTOS) }
+    var selectedAlbumId by remember { mutableStateOf<String?>(null) }
+    var showViewModeDropdown by remember { mutableStateOf(false) }
+
+    val mediaImagesMap = remember(mediaImages) {
+        mediaImages.associateBy { it.uri }
+    }
+
+    val resolvedKeptPhotos = remember(keptPhotos, mediaImagesMap) {
+        keptPhotos.map { entity ->
+            val mediaImage = mediaImagesMap[entity.uri]
+            ResolvedKeptPhoto(
+                uri = entity.uri,
+                keptAt = entity.keptAt,
+                bucketId = mediaImage?.bucketId ?: "unknown",
+                bucketName = mediaImage?.bucketName ?: "Others"
+            )
+        }
+    }
+
+    val keptAlbums = remember(resolvedKeptPhotos) {
+        resolvedKeptPhotos.groupBy { it.bucketId }.map { (bucketId, photos) ->
+            KeptAlbum(
+                id = bucketId,
+                name = photos.first().bucketName,
+                coverPhotoUri = photos.first().uri,
+                photoCount = photos.size,
+                photos = photos
+            )
+        }.sortedBy { it.name }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Spacer(modifier = Modifier.height(28.dp))
         Row(
@@ -847,12 +1045,78 @@ fun KeptTabContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "Kept Photos",
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Kept Photos",
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF252538))
+                            .clickable { showViewModeDropdown = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (keptViewMode == KeptViewMode.ALL_PHOTOS) "All Kept Photos" else "Kept Photos Albums",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select View Mode",
+                            tint = Color.LightGray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showViewModeDropdown,
+                        onDismissRequest = { showViewModeDropdown = false },
+                        modifier = Modifier.background(Color(0xFF252538))
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "All Kept Photos",
+                                    color = Color.White,
+                                    fontSize = 13.sp
+                                )
+                            },
+                            onClick = {
+                                keptViewMode = KeptViewMode.ALL_PHOTOS
+                                selectedAlbumId = null
+                                showViewModeDropdown = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Kept Photos Albums",
+                                    color = Color.White,
+                                    fontSize = 13.sp
+                                )
+                            },
+                            onClick = {
+                                keptViewMode = KeptViewMode.ALBUMS
+                                selectedAlbumId = null
+                                showViewModeDropdown = false
+                            }
+                        )
+                    }
+                }
+            }
+
             if (keptPhotos.isNotEmpty()) {
                 IconButton(onClick = onResetAll) {
                     Icon(
@@ -878,36 +1142,160 @@ fun KeptTabContent(
                 )
             }
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(keptPhotos, key = { it.uri }) { photo ->
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            when (keptViewMode) {
+                KeptViewMode.ALL_PHOTOS -> {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
-                            .clickable { onResetPhoto(photo.uri) }
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentPadding = PaddingValues(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Image(
-                            painter = rememberAsyncImagePainter(model = photo.uri),
-                            contentDescription = "Kept Photo",
-                            contentScale = ContentScale.Crop,
+                        items(keptPhotos, key = { it.uri }) { photo ->
+                            KeptPhotoCard(
+                                uri = photo.uri,
+                                onClick = { onPhotoClick(photo.uri) },
+                                onLongClick = { onPhotoLongClick(photo.uri) }
+                            )
+                        }
+                    }
+                }
+
+                KeptViewMode.ALBUMS -> {
+                    if (selectedAlbumId == null) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
                             modifier = Modifier
                                 .fillMaxSize()
-                                .clip(RoundedCornerShape(12.dp))
-                        )
+                                .weight(1f),
+                            contentPadding = PaddingValues(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(keptAlbums, key = { it.id }) { album ->
+                                Card(
+                                    shape = RoundedCornerShape(12.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f)
+                                        .clickable { selectedAlbumId = album.id }
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        Image(
+                                            painter = rememberAsyncImagePainter(model = album.coverPhotoUri),
+                                            contentDescription = album.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .align(Alignment.BottomCenter)
+                                                .background(Color.Black.copy(alpha = 0.6f))
+                                                .padding(4.dp)
+                                        ) {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text(
+                                                    text = album.name,
+                                                    color = Color.White,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1
+                                                )
+                                                Text(
+                                                    text = "(${album.photoCount})",
+                                                    color = Color.LightGray,
+                                                    fontSize = 10.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        val activeAlbum = keptAlbums.find { it.id == selectedAlbumId }
+                        if (activeAlbum != null) {
+                            Column(modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f)) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedAlbumId = null }
+                                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = Color(0xFF6C63FF),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Back to Albums (${activeAlbum.name})",
+                                        color = Color(0xFF6C63FF),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
+
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(3),
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    items(activeAlbum.photos, key = { it.uri }) { photo ->
+                                        KeptPhotoCard(
+                                            uri = photo.uri,
+                                            onClick = { onPhotoClick(photo.uri) },
+                                            onLongClick = { onPhotoLongClick(photo.uri) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun KeptPhotoCard(
+    uri: String,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+    ) {
+        Image(
+            painter = rememberAsyncImagePainter(model = uri),
+            contentDescription = "Kept Photo",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 

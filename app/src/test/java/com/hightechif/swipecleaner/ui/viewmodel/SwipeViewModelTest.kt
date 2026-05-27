@@ -1,9 +1,8 @@
 package com.hightechif.swipecleaner.ui.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import com.hightechif.swipecleaner.data.db.KeptPhotoEntity
-import com.hightechif.swipecleaner.data.db.TrashedPhotoEntity
 import com.hightechif.swipecleaner.data.repository.KeptPhotosRepository
+import com.hightechif.swipecleaner.data.repository.MediaStoreRepository
 import com.hightechif.swipecleaner.data.repository.TrashedPhotosRepository
 import com.hightechif.swipecleaner.domain.usecase.ExecuteTrashRequestUseCase
 import com.hightechif.swipecleaner.domain.usecase.GetShuffledPhotoPoolUseCase
@@ -43,6 +42,7 @@ class SwipeViewModelTest {
     private lateinit var executeTrashRequestUseCase: ExecuteTrashRequestUseCase
     private lateinit var keptPhotosRepository: KeptPhotosRepository
     private lateinit var trashedPhotosRepository: TrashedPhotosRepository
+    private lateinit var mediaStoreRepository: MediaStoreRepository
 
     private lateinit var viewModel: SwipeViewModel
 
@@ -56,13 +56,16 @@ class SwipeViewModelTest {
         executeTrashRequestUseCase = mockk()
         keptPhotosRepository = mockk()
         trashedPhotosRepository = mockk()
+        mediaStoreRepository = mockk()
 
         // Stub the Flow-based observables required at ViewModel init
         every { keptPhotosRepository.getKeptPhotosFlow() } returns flowOf(emptyList())
         every { trashedPhotosRepository.getTrashedPhotosFlow() } returns flowOf(emptyList())
+        every { mediaStoreRepository.queryAllAlbums() } returns emptyList()
+        every { mediaStoreRepository.queryAllMediaImages() } returns emptyList()
 
         // Default stub for loadPhotoPool called in init
-        coEvery { getShuffledPhotoPoolUseCase() } returns listOf(
+        coEvery { getShuffledPhotoPoolUseCase(any()) } returns listOf(
             "content://media/1",
             "content://media/2",
             "content://media/3"
@@ -79,7 +82,8 @@ class SwipeViewModelTest {
         markImageKeptUseCase,
         executeTrashRequestUseCase,
         keptPhotosRepository,
-        trashedPhotosRepository
+        trashedPhotosRepository,
+        mediaStoreRepository
     )
 
     // Task 5.3: swipeLeft() adds photo to trash repository and advances index
@@ -167,18 +171,24 @@ class SwipeViewModelTest {
         coJustRun { trashedPhotosRepository.insertTrashedPhoto(any()) }
         coJustRun { trashedPhotosRepository.deleteTrashedPhoto(any()) }
         // Simulate a single-photo pool so session finishes after swipe
-        coEvery { getShuffledPhotoPoolUseCase() } returns listOf("content://media/solo")
+        coEvery { getShuffledPhotoPoolUseCase(any()) } returns listOf("content://media/solo")
 
         val vm = createViewModel()
         advanceUntilIdle()
 
         vm.swipeLeft()
         advanceUntilIdle()
-        assertTrue("Session should be finished after all photos swiped", vm.uiState.value.isSessionFinished)
+        assertTrue(
+            "Session should be finished after all photos swiped",
+            vm.uiState.value.isSessionFinished
+        )
 
         vm.restoreFromTrash("content://media/solo")
         advanceUntilIdle()
 
-        assertFalse("Session should not be finished after restore", vm.uiState.value.isSessionFinished)
+        assertFalse(
+            "Session should not be finished after restore",
+            vm.uiState.value.isSessionFinished
+        )
     }
 }

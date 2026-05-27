@@ -47,6 +47,6 @@ val appModule = module {
     single { ExecuteTrashRequestUseCase(get()) }
 
     // ViewModels
-    viewModel { SwipeViewModel(get(), get(), get(), get(), get()) }
-    viewModel { KeptPhotosViewModel(get(), get()) }
+    viewModel { SwipeViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { KeptPhotosViewModel(get(), get(), get(), get()) }
 }
