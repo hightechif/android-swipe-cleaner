@@ -81,16 +81,13 @@ class SwipeViewModel(
         }
         loadAlbums()
         loadMediaImages()
-        loadPhotoPool(keepDeleteQueue = true)
+        loadPhotoPool()
     }
 
-    fun loadPhotoPool(keepDeleteQueue: Boolean = true) {
+    fun loadPhotoPool() {
         _uiState.update { it.copy(isLoading = true, isSessionFinished = false) }
         viewModelScope.launch {
             try {
-                if (!keepDeleteQueue) {
-                    trashedPhotosRepository.clearAllTrashedPhotos()
-                }
                 val selectedAlbumId = _uiState.value.selectedAlbum?.id
                 val pool = getShuffledPhotoPoolUseCase(selectedAlbumId)
                 _uiState.update { state ->
@@ -115,7 +112,7 @@ class SwipeViewModel(
 
     fun selectAlbum(album: Album?) {
         _uiState.update { it.copy(selectedAlbum = album) }
-        loadPhotoPool(keepDeleteQueue = true)
+        loadPhotoPool()
     }
 
     fun loadAlbums() {
@@ -234,7 +231,7 @@ class SwipeViewModel(
         viewModelScope.launch {
             try {
                 keptPhotosRepository.clearAllKeptPhotos()
-                loadPhotoPool(keepDeleteQueue = true)
+                loadPhotoPool()
                 _uiState.update { it.copy(activeTab = SwipeTab.SWIPE) }
             } catch (e: Exception) {
                 e.printStackTrace()

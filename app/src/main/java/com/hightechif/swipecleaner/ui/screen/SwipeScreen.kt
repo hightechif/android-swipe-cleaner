@@ -54,7 +54,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -487,54 +486,113 @@ fun SwipeScreen(
         ) {
             when (uiState.activeTab) {
                 SwipeTab.SWIPE -> {
-                    when {
-                        uiState.isLoading -> {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                CircularProgressIndicator(color = Color(0xFF6C63FF))
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = "Loading gallery pool...",
-                                    color = Color.LightGray,
-                                    fontSize = 15.sp
-                                )
-                            }
-                        }
-
-                        uiState.photoPool.isEmpty() -> {
-                            EmptySwipeView(
-                                deleteQueueSize = uiState.deleteQueue.size,
-                                onExecuteTrash = { viewModel.executeTrashRequest() },
-                                onSeeKept = { viewModel.setActiveTab(SwipeTab.KEPT) }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // App Header (always visible on Swipe tab)
+                        Spacer(modifier = Modifier.height(28.dp))
+                        Text(
+                            text = "SwipeCleaner",
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF252538))
+                                .clickable { setShowAlbumSelectorDialog(true) }
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = uiState.selectedAlbum?.name ?: "All Photos",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Select Folder",
+                                tint = Color.LightGray,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
-
-                        uiState.isSessionFinished -> {
-                            SessionCompletedView(
-                                totalPoolSize = uiState.photoPool.size,
-                                keptCount = uiState.keptCount,
-                                deleteQueueSize = uiState.deleteQueue.size,
-                                onExecuteTrash = { viewModel.executeTrashRequest() },
-                                onSeeKept = { viewModel.setActiveTab(SwipeTab.KEPT) },
-                                onResetRemaining = { viewModel.loadPhotoPool(keepDeleteQueue = true) }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (!uiState.isLoading && uiState.photoPool.isNotEmpty() && !uiState.isSessionFinished) {
+                            Text(
+                                text = "Progress: ${uiState.currentIndex} / ${uiState.photoPool.size}",
+                                color = Color.LightGray,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
                             )
+                        } else {
+                            // Extra space to keep UI layout visual alignment
+                            Spacer(modifier = Modifier.height(20.dp))
                         }
 
-                        else -> {
-                            SwipeContent(
-                                photoPool = uiState.photoPool,
-                                currentIndex = uiState.currentIndex,
-                                selectedAlbumName = uiState.selectedAlbum?.name ?: "All Photos",
-                                onSelectFolderClick = { setShowAlbumSelectorDialog(true) },
-                                onSwipeLeft = { viewModel.swipeLeft() },
-                                onSwipeRight = { viewModel.swipeRight() },
-                                onCardClick = {
-                                    setActiveViewerUri(uiState.photoPool[uiState.currentIndex])
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when {
+                                uiState.isLoading -> {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        CircularProgressIndicator(color = Color(0xFF6C63FF))
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text(
+                                            text = "Loading gallery pool...",
+                                            color = Color.LightGray,
+                                            fontSize = 15.sp
+                                        )
+                                    }
                                 }
-                            )
+
+                                uiState.photoPool.isEmpty() -> {
+                                    EmptySwipeView(
+                                        deleteQueueSize = uiState.deleteQueue.size,
+                                        onExecuteTrash = { viewModel.executeTrashRequest() },
+                                        onSeeKept = { viewModel.setActiveTab(SwipeTab.KEPT) }
+                                    )
+                                }
+
+                                uiState.isSessionFinished -> {
+                                    SessionCompletedView(
+                                        totalPoolSize = uiState.photoPool.size,
+                                        keptCount = uiState.keptCount,
+                                        deleteQueueSize = uiState.deleteQueue.size,
+                                        onExecuteTrash = { viewModel.executeTrashRequest() },
+                                        onSeeKept = { viewModel.setActiveTab(SwipeTab.KEPT) },
+                                    )
+                                }
+
+                                else -> {
+                                    SwipeContent(
+                                        photoPool = uiState.photoPool,
+                                        currentIndex = uiState.currentIndex,
+                                        onSwipeLeft = { viewModel.swipeLeft() },
+                                        onSwipeRight = { viewModel.swipeRight() },
+                                        onCardClick = {
+                                            setActiveViewerUri(uiState.photoPool[uiState.currentIndex])
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -573,8 +631,6 @@ fun SwipeScreen(
 fun SwipeContent(
     photoPool: List<String>,
     currentIndex: Int,
-    selectedAlbumName: String,
-    onSelectFolderClick: () -> Unit,
     onSwipeLeft: () -> Unit,
     onSwipeRight: () -> Unit,
     onCardClick: () -> Unit
@@ -582,59 +638,9 @@ fun SwipeContent(
     val totalCount = photoPool.size
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // App header with progress indicator
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(28.dp))
-            Text(
-                text = "SwipeCleaner",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF252538))
-                    .clickable { onSelectFolderClick() }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = selectedAlbumName,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = "Select Folder",
-                    tint = Color.LightGray,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Progress: $currentIndex / $totalCount",
-                color = Color.LightGray,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
         // Stacked Card layout
         Box(
             modifier = Modifier
@@ -777,7 +783,7 @@ fun EmptySwipeView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -845,8 +851,7 @@ fun SessionCompletedView(
     keptCount: Int,
     deleteQueueSize: Int,
     onExecuteTrash: () -> Unit,
-    onSeeKept: () -> Unit,
-    onResetRemaining: () -> Unit
+    onSeeKept: () -> Unit
 ) {
     val composition by rememberLottieComposition(
         spec = LottieCompositionSpec.Url("https://assets10.lottiefiles.com/packages/lf20_l4xxtfd3.json")
@@ -866,7 +871,7 @@ fun SessionCompletedView(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -958,17 +963,6 @@ fun SessionCompletedView(
                     )
                 ) {
                     Text("See Kept Photos", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-
-                OutlinedButton(
-                    onClick = onResetRemaining,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                ) {
-                    Text("Review Remaining Photos", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1222,9 +1216,11 @@ fun KeptTabContent(
                     } else {
                         val activeAlbum = keptAlbums.find { it.id == selectedAlbumId }
                         if (activeAlbum != null) {
-                            Column(modifier = Modifier
-                                .fillMaxSize()
-                                .weight(1f)) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .weight(1f)
+                            ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
