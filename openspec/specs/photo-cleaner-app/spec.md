@@ -15,7 +15,7 @@ The application SHALL check for storage permissions (`READ_MEDIA_IMAGES` and `RE
 - **THEN** the application navigates directly to the Swipe Screen.
 
 ### Requirement: Swipe Screen Interface
-The Swipe Screen SHALL display a stack containing the current photo and preloaded subsequent photos, hosted within a Scaffold containing a Bottom Navigation Bar. The top card SHALL support horizontal drag gestures to keep or delete, and tap gestures to open a Fullscreen Image Viewer overlay. The Bottom Navigation Bar SHALL show badges with count metrics for Kept and Trash tabs. The Swipe Screen SHALL also provide a dropdown/selector to filter the active review stack by a specific folder (album) or show all photos.
+The Swipe Screen SHALL display a stack containing the current photo and preloaded subsequent photos, hosted within a Scaffold containing a Bottom Navigation Bar. The top card SHALL support horizontal drag gestures to keep or delete, and tap gestures to open a Fullscreen Image Viewer overlay. The Bottom Navigation Bar SHALL show badges with count metrics for Kept and Trash tabs. The Swipe Screen SHALL also provide a dropdown/selector to filter the active review stack by a specific folder (album) or show all photos. The folder selection dropdown options SHALL display only those folders containing unreviewed photos (neither kept nor trashed), showing their unreviewed photos count, and SHALL update dynamically in real-time.
 
 #### Scenario: Swipe Right to Keep
 - **WHEN** the user drags the photo card right past the threshold and releases it
@@ -40,6 +40,10 @@ The Swipe Screen SHALL display a stack containing the current photo and preloade
 #### Scenario: Filter Swipe Deck by Folder
 - **WHEN** the user selects a specific folder/album from the folder selection dropdown on the Swipe screen
 - **THEN** the application reloads the swipe photo pool containing only the photos inside that folder, excluding already reviewed photos, and resets the swipe stack to the first index.
+
+#### Scenario: Folder Dropdown Contains Only Unreviewed Folders and Dynamically Updated Count
+- **WHEN** the user opens the folder selection dropdown
+- **THEN** the application only displays folders containing unreviewed photos, with their unreviewed counts (total photos minus kept and trashed photos in that folder), updating dynamically when reviews change.
 
 ### Requirement: Completion Screen Statistics and Celebration
 When the photo pool is exhausted, the application SHALL transition to a Completion Screen. The Completion Screen SHALL display the session stats (total reviewed, total marked for deletion) and SHALL play a celebratory Lottie confetti animation regardless of the outcome of the deletion dialog.
