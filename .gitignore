@@ -172,4 +172,5 @@ $RECYCLE.BIN/
 # Agent internal data
 # ============================================================
 .agent/
+.agents/
 .claude/
