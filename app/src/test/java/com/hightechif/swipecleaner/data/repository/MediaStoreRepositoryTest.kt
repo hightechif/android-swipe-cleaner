@@ -1,63 +1,71 @@
 package com.hightechif.swipecleaner.data.repository
 
+import com.google.common.truth.Truth.assertThat
+import com.hightechif.swipecleaner.domain.repository.IMediaStoreRepository
+import io.mockk.MockKAnnotations
+import io.mockk.clearAllMocks
 import io.mockk.every
-import io.mockk.mockk
+import io.mockk.impl.annotations.MockK
 import io.mockk.verify
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.JUnit4
 
 /**
- * Unit tests for [MediaStoreRepository] interface contract.
+ * Contract tests for IMediaStoreRepository.
  *
- * Note: [MediaStoreRepositoryImpl] directly uses `ContentResolver` and Android system APIs,
- * which require an instrumented environment. These tests verify the interface contract through
- * a mock implementation, and verify behaviours of use-case collaborators.
- *
- * Full integration tests for the real implementation should live in androidTest.
+ * MediaStoreRepository requires ContentResolver and Android system APIs; these tests verify
+ * the interface contract via a mock. Full integration tests belong in androidTest.
  */
+@RunWith(JUnit4::class)
 class MediaStoreRepositoryTest {
 
-    private lateinit var repository: MediaStoreRepository
+    @MockK lateinit var sut: IMediaStoreRepository
 
     @Before
     fun setUp() {
-        repository = mockk()
+        MockKAnnotations.init(this)
+        clearAllMocks()
     }
 
-    // Task 6.2: queryAllImageUris with a non-empty result returns a list with URIs
     @Test
-    fun queryAllImageUris_returnsListOfUris() {
+    fun `queryAllImageUris returns list of uris`() {
+        // Arrange
         val expectedUris = listOf("content://media/1", "content://media/2")
-        every { repository.queryAllImageUris() } returns expectedUris
+        every { sut.queryAllImageUris() } returns expectedUris
 
-        val result = repository.queryAllImageUris()
+        // Act
+        val result = sut.queryAllImageUris()
 
-        assertEquals(2, result.size)
-        assertEquals("content://media/1", result[0])
-        assertEquals("content://media/2", result[1])
+        // Assert
+        assertThat(result).hasSize(2)
+        assertThat(result[0]).isEqualTo("content://media/1")
+        assertThat(result[1]).isEqualTo("content://media/2")
     }
 
-    // Task 6.3: queryAllImageUris with empty result returns empty list
     @Test
-    fun queryAllImageUris_returnsEmptyList_whenNoImages() {
-        every { repository.queryAllImageUris() } returns emptyList()
+    fun `queryAllImageUris returns empty list when no images`() {
+        // Arrange
+        every { sut.queryAllImageUris() } returns emptyList()
 
-        val result = repository.queryAllImageUris()
+        // Act
+        val result = sut.queryAllImageUris()
 
-        assertTrue("Expected empty URI list", result.isEmpty())
+        // Assert
+        assertThat(result).isEmpty()
     }
 
-    // createTrashRequest returns null when there are no URIs
     @Test
-    fun createTrashRequest_returnsNull_whenUriListIsEmpty() {
-        every { repository.createTrashRequest(emptyList()) } returns null
+    fun `createTrashRequest returns null when uri list is empty`() {
+        // Arrange
+        every { sut.createTrashRequest(emptyList()) } returns null
 
-        val result = repository.createTrashRequest(emptyList())
+        // Act
+        val result = sut.createTrashRequest(emptyList())
 
-        assertNull(result)
-        verify(exactly = 1) { repository.createTrashRequest(emptyList()) }
+        // Assert
+        assertThat(result).isNull()
+        verify(exactly = 1) { sut.createTrashRequest(emptyList()) }
     }
 }

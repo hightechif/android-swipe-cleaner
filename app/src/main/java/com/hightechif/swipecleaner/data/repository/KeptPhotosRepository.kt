@@ -1,32 +1,24 @@
 package com.hightechif.swipecleaner.data.repository
 
-import com.hightechif.swipecleaner.data.db.KeptPhotoDao
-import com.hightechif.swipecleaner.data.db.KeptPhotoEntity
+import com.hightechif.swipecleaner.data.source.local.KeptPhotoDao
+import com.hightechif.swipecleaner.data.source.local.KeptPhotoEntity
+import com.hightechif.swipecleaner.domain.model.KeptPhoto
+import com.hightechif.swipecleaner.domain.repository.IKeptPhotosRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
-interface KeptPhotosRepository {
-    fun getKeptPhotosFlow(): Flow<List<KeptPhotoEntity>>
-    suspend fun getKeptPhotos(): List<KeptPhotoEntity>
-    suspend fun insertKeptPhoto(uri: String)
-    suspend fun clearAllKeptPhotos()
-    suspend fun deleteKeptPhoto(uri: String)
-}
-
-class KeptPhotosRepositoryImpl(
+class KeptPhotosRepository(
     private val keptPhotoDao: KeptPhotoDao
-) : KeptPhotosRepository {
+) : IKeptPhotosRepository {
 
-    override fun getKeptPhotosFlow(): Flow<List<KeptPhotoEntity>> {
-        return keptPhotoDao.getAllKeptPhotosFlow()
-    }
+    override fun getKeptPhotosFlow(): Flow<List<KeptPhoto>> =
+        keptPhotoDao.getAllKeptPhotosFlow().map { entities -> entities.map { it.toDomain() } }
 
-    override suspend fun getKeptPhotos(): List<KeptPhotoEntity> {
-        return keptPhotoDao.getAllKeptPhotos()
-    }
+    override suspend fun getKeptPhotos(): List<KeptPhoto> =
+        keptPhotoDao.getAllKeptPhotos().map { it.toDomain() }
 
     override suspend fun insertKeptPhoto(uri: String) {
-        val entity = KeptPhotoEntity(uri = uri, keptAt = System.currentTimeMillis())
-        keptPhotoDao.insertKeptPhoto(entity)
+        keptPhotoDao.insertKeptPhoto(KeptPhotoEntity(uri = uri, keptAt = System.currentTimeMillis()))
     }
 
     override suspend fun clearAllKeptPhotos() {

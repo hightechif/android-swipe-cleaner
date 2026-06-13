@@ -1,103 +1,121 @@
 package com.hightechif.swipecleaner.data.repository
 
-import com.hightechif.swipecleaner.data.db.TrashedPhotoDao
-import com.hightechif.swipecleaner.data.db.TrashedPhotoEntity
+import com.google.common.truth.Truth.assertThat
+import com.hightechif.swipecleaner.data.source.local.TrashedPhotoDao
+import com.hightechif.swipecleaner.data.source.local.TrashedPhotoEntity
+import io.mockk.MockKAnnotations
+import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
-import io.mockk.mockk
+import io.mockk.every
+import io.mockk.impl.annotations.MockK
 import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.JUnit4
 
-@ExperimentalCoroutinesApi
+@RunWith(JUnit4::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class TrashedPhotosRepositoryTest {
 
-    private lateinit var dao: TrashedPhotoDao
-    private lateinit var repository: TrashedPhotosRepository
+    @MockK lateinit var dao: TrashedPhotoDao
+
+    private lateinit var sut: TrashedPhotosRepository
 
     @Before
     fun setUp() {
-        dao = mockk(relaxed = true)
-        repository = TrashedPhotosRepositoryImpl(dao)
+        MockKAnnotations.init(this)
+        clearAllMocks()
+        sut = TrashedPhotosRepository(dao)
     }
 
-    // Task 3.2: addToTrash (insertTrashedPhoto) calls DAO insert with correct entity
     @Test
-    fun insertTrashedPhoto_callsDaoInsertWithCorrectUri() = runTest {
+    fun `insertTrashedPhoto calls dao insert with correct uri`() = runTest {
+        // Arrange
         val slot = slot<TrashedPhotoEntity>()
         coJustRun { dao.insertTrashedPhoto(capture(slot)) }
 
-        repository.insertTrashedPhoto("content://media/test/1")
+        // Act
+        sut.insertTrashedPhoto("content://media/test/1")
 
+        // Assert
         coVerify(exactly = 1) { dao.insertTrashedPhoto(any()) }
-        assertEquals("content://media/test/1", slot.captured.uri)
+        assertThat(slot.captured.uri).isEqualTo("content://media/test/1")
     }
 
-    // Task 3.3: deleteTrashedPhoto calls DAO delete with the given URI
     @Test
-    fun deleteTrashedPhoto_callsDaoDeleteWithCorrectUri() = runTest {
+    fun `deleteTrashedPhoto calls dao delete with correct uri`() = runTest {
+        // Arrange
         val uriSlot = slot<String>()
         coJustRun { dao.deleteTrashedPhoto(capture(uriSlot)) }
 
-        repository.deleteTrashedPhoto("content://media/test/2")
+        // Act
+        sut.deleteTrashedPhoto("content://media/test/2")
 
+        // Assert
         coVerify(exactly = 1) { dao.deleteTrashedPhoto("content://media/test/2") }
-        assertEquals("content://media/test/2", uriSlot.captured)
+        assertThat(uriSlot.captured).isEqualTo("content://media/test/2")
     }
 
-    // Task 3.4: getTrashedPhotos maps all DAO entities
     @Test
-    fun getTrashedPhotos_returnsAllEntitiesFromDao() = runTest {
+    fun `getTrashedPhotos returns mapped domain models from dao`() = runTest {
+        // Arrange
         val entities = listOf(
             TrashedPhotoEntity(uri = "content://media/1", trashedAt = 1000L),
             TrashedPhotoEntity(uri = "content://media/2", trashedAt = 2000L)
         )
         coEvery { dao.getAllTrashedPhotos() } returns entities
 
-        val result = repository.getTrashedPhotos()
+        // Act
+        val result = sut.getTrashedPhotos()
 
-        assertEquals(2, result.size)
-        assertEquals("content://media/1", result[0].uri)
-        assertEquals("content://media/2", result[1].uri)
+        // Assert
+        assertThat(result).hasSize(2)
+        assertThat(result[0].uri).isEqualTo("content://media/1")
+        assertThat(result[1].uri).isEqualTo("content://media/2")
     }
 
-    // Extra: clearAllTrashedPhotos delegates to DAO
     @Test
-    fun clearAllTrashedPhotos_callsDaoDeleteAll() = runTest {
+    fun `clearAllTrashedPhotos delegates to dao deleteAll`() = runTest {
+        // Arrange
         coJustRun { dao.deleteAllTrashedPhotos() }
 
-        repository.clearAllTrashedPhotos()
+        // Act
+        sut.clearAllTrashedPhotos()
 
+        // Assert
         coVerify(exactly = 1) { dao.deleteAllTrashedPhotos() }
     }
 
-    // Extra: getTrashedPhotosFlow delegates to DAO flow
     @Test
-    fun getTrashedPhotosFlow_emitsDaoFlowValues() = runTest {
+    fun `getTrashedPhotosFlow emits mapped domain models from dao`() = runTest {
+        // Arrange
         val entities = listOf(TrashedPhotoEntity(uri = "content://media/3", trashedAt = 3000L))
-        coEvery { dao.getAllTrashedPhotosFlow() } returns flowOf(entities)
+        every { dao.getAllTrashedPhotosFlow() } returns flowOf(entities)
 
-        val flow = repository.getTrashedPhotosFlow()
-        var result: List<TrashedPhotoEntity>? = null
-        flow.collect { result = it }
+        // Act
+        val result = sut.getTrashedPhotosFlow().first()
 
-        assertEquals(1, result?.size)
-        assertEquals("content://media/3", result?.get(0)?.uri)
+        // Assert
+        assertThat(result).hasSize(1)
+        assertThat(result[0].uri).isEqualTo("content://media/3")
     }
 
-    // Extra: getTrashedPhotos returns empty when DAO returns empty
     @Test
-    fun getTrashedPhotos_returnsEmptyList_whenDaoReturnsEmpty() = runTest {
+    fun `getTrashedPhotos returns empty list when dao returns empty`() = runTest {
+        // Arrange
         coEvery { dao.getAllTrashedPhotos() } returns emptyList()
 
-        val result = repository.getTrashedPhotos()
+        // Act
+        val result = sut.getTrashedPhotos()
 
-        assertTrue(result.isEmpty())
+        // Assert
+        assertThat(result).isEmpty()
     }
 }

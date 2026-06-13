@@ -6,66 +6,32 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import androidx.core.net.toUri
+import com.hightechif.swipecleaner.domain.model.Album
+import com.hightechif.swipecleaner.domain.model.MediaImage
+import com.hightechif.swipecleaner.domain.repository.IMediaStoreRepository
+import timber.log.Timber
 
-data class Album(
-    val id: String,
-    val name: String,
-    val coverPhotoUri: String,
-    val photoCount: Int
-)
-
-data class MediaImage(
-    val uri: String,
-    val bucketId: String,
-    val bucketName: String
-)
-
-interface MediaStoreRepository {
-    fun queryAllImageUris(): List<String>
-    fun queryImageUrisFromBucket(bucketId: String): List<String>
-    fun queryAllAlbums(): List<Album>
-    fun queryAllMediaImages(): List<MediaImage>
-    fun createTrashRequest(uris: List<String>): IntentSender?
-    fun deleteUrisLegacy(uris: List<String>): Boolean
-}
-
-class MediaStoreRepositoryImpl(
+class MediaStoreRepository(
     private val context: Context
-) : MediaStoreRepository {
+) : IMediaStoreRepository {
 
     override fun queryAllImageUris(): List<String> {
         val uriList = mutableListOf<String>()
-        val contentResolver = context.contentResolver
+        val collection = mediaCollection()
 
-        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        } else {
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        }
-
-        val projection = arrayOf(
-            MediaStore.Images.Media._ID
-        )
-
+        val projection = arrayOf(MediaStore.Images.Media._ID)
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         try {
-            contentResolver.query(
-                collection,
-                projection,
-                null,
-                null,
-                sortOrder
-            )?.use { cursor ->
+            context.contentResolver.query(collection, projection, null, null, sortOrder)?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
-                    val contentUri = Uri.withAppendedPath(collection, id.toString())
-                    uriList.add(contentUri.toString())
+                    uriList.add(Uri.withAppendedPath(collection, id.toString()).toString())
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Timber.e(e, "Failed to query all image URIs")
         }
 
         return uriList
@@ -73,39 +39,23 @@ class MediaStoreRepositoryImpl(
 
     override fun queryImageUrisFromBucket(bucketId: String): List<String> {
         val uriList = mutableListOf<String>()
-        val contentResolver = context.contentResolver
+        val collection = mediaCollection()
 
-        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        } else {
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        }
-
-        val projection = arrayOf(
-            MediaStore.Images.Media._ID
-        )
-
+        val projection = arrayOf(MediaStore.Images.Media._ID)
         val selection = "${MediaStore.Images.Media.BUCKET_ID} = ?"
         val selectionArgs = arrayOf(bucketId)
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         try {
-            contentResolver.query(
-                collection,
-                projection,
-                selection,
-                selectionArgs,
-                sortOrder
-            )?.use { cursor ->
+            context.contentResolver.query(collection, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
-                    val contentUri = Uri.withAppendedPath(collection, id.toString())
-                    uriList.add(contentUri.toString())
+                    uriList.add(Uri.withAppendedPath(collection, id.toString()).toString())
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Timber.e(e, "Failed to query image URIs from bucket $bucketId")
         }
 
         return uriList
@@ -113,30 +63,17 @@ class MediaStoreRepositoryImpl(
 
     override fun queryAllAlbums(): List<Album> {
         val albumsMap = mutableMapOf<String, AlbumBuilder>()
-        val contentResolver = context.contentResolver
-
-        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        } else {
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        }
+        val collection = mediaCollection()
 
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.BUCKET_ID,
             MediaStore.Images.Media.BUCKET_DISPLAY_NAME
         )
-
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         try {
-            contentResolver.query(
-                collection,
-                projection,
-                null,
-                null,
-                sortOrder
-            )?.use { cursor ->
+            context.contentResolver.query(collection, projection, null, null, sortOrder)?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
                 val bucketIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
                 val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
@@ -154,7 +91,7 @@ class MediaStoreRepositoryImpl(
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Timber.e(e, "Failed to query all albums")
         }
 
         return albumsMap.values.map { it.build() }.sortedBy { it.name }
@@ -162,30 +99,17 @@ class MediaStoreRepositoryImpl(
 
     override fun queryAllMediaImages(): List<MediaImage> {
         val imagesList = mutableListOf<MediaImage>()
-        val contentResolver = context.contentResolver
-
-        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        } else {
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        }
+        val collection = mediaCollection()
 
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.BUCKET_ID,
             MediaStore.Images.Media.BUCKET_DISPLAY_NAME
         )
-
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         try {
-            contentResolver.query(
-                collection,
-                projection,
-                null,
-                null,
-                sortOrder
-            )?.use { cursor ->
+            context.contentResolver.query(collection, projection, null, null, sortOrder)?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
                 val bucketIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
                 val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
@@ -199,7 +123,7 @@ class MediaStoreRepositoryImpl(
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Timber.e(e, "Failed to query all media images")
         }
 
         return imagesList
@@ -207,13 +131,15 @@ class MediaStoreRepositoryImpl(
 
     override fun createTrashRequest(uris: List<String>): IntentSender? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val contentResolver = context.contentResolver
-            val uriList = uris.map { it.toUri() }
             return try {
-                val pendingIntent = MediaStore.createTrashRequest(contentResolver, uriList, true)
+                val pendingIntent = MediaStore.createTrashRequest(
+                    context.contentResolver,
+                    uris.map { it.toUri() },
+                    true
+                )
                 pendingIntent.intentSender
             } catch (e: Exception) {
-                e.printStackTrace()
+                Timber.e(e, "Failed to create trash request")
                 null
             }
         }
@@ -222,20 +148,25 @@ class MediaStoreRepositoryImpl(
 
     override fun deleteUrisLegacy(uris: List<String>): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            val contentResolver = context.contentResolver
             var success = true
             for (uriStr in uris) {
                 try {
-                    val count = contentResolver.delete(uriStr.toUri(), null, null)
+                    val count = context.contentResolver.delete(uriStr.toUri(), null, null)
                     if (count <= 0) success = false
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Timber.e(e, "Failed to delete URI: $uriStr")
                     success = false
                 }
             }
             return success
         }
         return false
+    }
+
+    private fun mediaCollection(): Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+    } else {
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     }
 }
 

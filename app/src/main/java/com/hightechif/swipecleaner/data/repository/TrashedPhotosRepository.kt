@@ -1,32 +1,24 @@
 package com.hightechif.swipecleaner.data.repository
 
-import com.hightechif.swipecleaner.data.db.TrashedPhotoDao
-import com.hightechif.swipecleaner.data.db.TrashedPhotoEntity
+import com.hightechif.swipecleaner.data.source.local.TrashedPhotoDao
+import com.hightechif.swipecleaner.data.source.local.TrashedPhotoEntity
+import com.hightechif.swipecleaner.domain.model.TrashedPhoto
+import com.hightechif.swipecleaner.domain.repository.ITrashedPhotosRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
-interface TrashedPhotosRepository {
-    fun getTrashedPhotosFlow(): Flow<List<TrashedPhotoEntity>>
-    suspend fun getTrashedPhotos(): List<TrashedPhotoEntity>
-    suspend fun insertTrashedPhoto(uri: String)
-    suspend fun clearAllTrashedPhotos()
-    suspend fun deleteTrashedPhoto(uri: String)
-}
-
-class TrashedPhotosRepositoryImpl(
+class TrashedPhotosRepository(
     private val trashedPhotoDao: TrashedPhotoDao
-) : TrashedPhotosRepository {
+) : ITrashedPhotosRepository {
 
-    override fun getTrashedPhotosFlow(): Flow<List<TrashedPhotoEntity>> {
-        return trashedPhotoDao.getAllTrashedPhotosFlow()
-    }
+    override fun getTrashedPhotosFlow(): Flow<List<TrashedPhoto>> =
+        trashedPhotoDao.getAllTrashedPhotosFlow().map { entities -> entities.map { it.toDomain() } }
 
-    override suspend fun getTrashedPhotos(): List<TrashedPhotoEntity> {
-        return trashedPhotoDao.getAllTrashedPhotos()
-    }
+    override suspend fun getTrashedPhotos(): List<TrashedPhoto> =
+        trashedPhotoDao.getAllTrashedPhotos().map { it.toDomain() }
 
     override suspend fun insertTrashedPhoto(uri: String) {
-        val entity = TrashedPhotoEntity(uri = uri, trashedAt = System.currentTimeMillis())
-        trashedPhotoDao.insertTrashedPhoto(entity)
+        trashedPhotoDao.insertTrashedPhoto(TrashedPhotoEntity(uri = uri, trashedAt = System.currentTimeMillis()))
     }
 
     override suspend fun clearAllTrashedPhotos() {

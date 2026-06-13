@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "edts-android": {
+      "source": "edtsmobile/edts-android-guidelines",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "ecc87984325ccfdb0a7dc7c14784541a88e154a29b5d7e00a149e7d149acf734"
+    }
+  }
+}
