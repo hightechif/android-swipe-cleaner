@@ -12,7 +12,7 @@
 
     <application
         android:name=".SwipeCleanerApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@android:drawable/sym_def_app_icon"
         android:label="SwipeCleaner"
         android:roundIcon="@android:drawable/sym_def_app_icon"
