@@ -18,6 +18,8 @@ import com.hightechif.swipecleaner.domain.use_case.MarkImageKeptUseCase
 import com.hightechif.swipecleaner.domain.use_case.ResetKeptPhotosUseCase
 import com.hightechif.swipecleaner.domain.use_case.RestoreFromKeptUseCase
 import com.hightechif.swipecleaner.domain.use_case.RestoreFromTrashUseCase
+import com.hightechif.swipecleaner.ui.feature.kept.KeptAlbum
+import com.hightechif.swipecleaner.ui.feature.kept.ResolvedKeptPhoto
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -78,9 +81,32 @@ class SwipeViewModel(
     val keptPhotos: StateFlow<List<KeptPhoto>> = getKeptPhotosUseCase()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
+
+    val resolvedKeptPhotos: StateFlow<List<ResolvedKeptPhoto>> = combine(
+        keptPhotos,
+        _state.map { it.mediaImages }
+    ) { kept, mediaImages ->
+        val mediaMap = mediaImages.associateBy { it.uri }
+        kept.map { k ->
+            val m = mediaMap[k.uri]
+            ResolvedKeptPhoto(k.uri, k.keptAt, m?.bucketId ?: "unknown", m?.bucketName ?: "Others")
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val keptAlbums: StateFlow<List<KeptAlbum>> = resolvedKeptPhotos.map { photos ->
+        photos.groupBy { it.bucketId }.map { (bucketId, albumPhotos) ->
+            KeptAlbum(
+                id = bucketId,
+                name = albumPhotos.first().bucketName,
+                coverPhotoUri = albumPhotos.first().uri,
+                photoCount = albumPhotos.size,
+                photos = albumPhotos
+            )
+        }.sortedBy { it.name }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
         viewModelScope.launch {
@@ -245,7 +271,8 @@ class SwipeViewModel(
 
     fun executeTrashRequest() {
         viewModelScope.launch {
-            val sender = executeTrashRequestUseCase(_state.value.deleteQueue)
+            val result = executeTrashRequestUseCase(_state.value.deleteQueue)
+            val sender = result.handle as? IntentSender
             if (sender != null) _trashEvent.emit(sender)
         }
     }

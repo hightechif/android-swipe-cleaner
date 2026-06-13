@@ -1,13 +1,13 @@
 package com.hightechif.swipecleaner.data.repository
 
 import android.content.Context
-import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import androidx.core.net.toUri
 import com.hightechif.swipecleaner.domain.model.Album
 import com.hightechif.swipecleaner.domain.model.MediaImage
+import com.hightechif.swipecleaner.domain.model.PendingSystemAction
 import com.hightechif.swipecleaner.domain.repository.IMediaStoreRepository
 import timber.log.Timber
 
@@ -129,7 +129,7 @@ class MediaStoreRepository(
         return imagesList
     }
 
-    override fun createTrashRequest(uris: List<String>): IntentSender? {
+    override fun createTrashRequest(uris: List<String>): PendingSystemAction {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return try {
                 val pendingIntent = MediaStore.createTrashRequest(
@@ -137,13 +137,13 @@ class MediaStoreRepository(
                     uris.map { it.toUri() },
                     true
                 )
-                pendingIntent.intentSender
+                PendingSystemAction(pendingIntent.intentSender)
             } catch (e: Exception) {
                 Timber.e(e, "Failed to create trash request")
-                null
+                PendingSystemAction(null)
             }
         }
-        return null
+        return PendingSystemAction(null)
     }
 
     override fun deleteUrisLegacy(uris: List<String>): Boolean {

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SwipeCleaner</string>
+
+    <!-- Permission Screen -->
+    <string name="permission_title">Gallery Access Required</string>
+    <string name="permission_description">SwipeCleaner needs access to your gallery to show your photos randomly and let you clean them up.</string>
+    <string name="permission_allow">Allow Access</string>
+
+    <!-- Swipe Screen -->
+    <string name="swipe_progress">Progress: %1$d / %2$d</string>
+    <string name="swipe_loading">Loading gallery pool…</string>
+    <string name="swipe_hint">◀ Swipe left to trash | Tap to zoom |  Swipe right to keep  ▶</string>
+    <string name="swipe_tab_swipe">Swipe</string>
+    <string name="swipe_tab_kept">Kept</string>
+    <string name="swipe_tab_trash">Trash</string>
+    <string name="swipe_select_folder">Select Folder</string>
+    <string name="swipe_all_photos">All Photos</string>
+
+    <!-- Empty / Completion States -->
+    <string name="empty_no_photos_title">No Photos Found</string>
+    <string name="empty_no_photos_desc">Your phone gallery is empty or SwipeCleaner doesn\'t have permission to access photos.</string>
+    <string name="empty_no_photos_to_delete">No Photos to Delete</string>
+    <string name="completion_congratulations">Congratulations! 🎉</string>
+    <string name="completion_subtitle">You\'ve completed reviewing your gallery!</string>
+    <string name="completion_session_summary">Session Summary</string>
+    <string name="completion_total_reviewed">Total Photos Reviewed</string>
+    <string name="completion_photos_kept">Photos Kept</string>
+    <string name="completion_photos_for_deletion">Photos Marked for Deletion</string>
+    <string name="completion_review_remaining">Review Remaining Photos</string>
+
+    <!-- Kept Photos Screen -->
+    <string name="kept_title">Kept Photos</string>
+    <string name="kept_no_photos_title">No Kept Photos Yet</string>
+    <string name="kept_no_photos_desc">Photos you swipe right will show up here.</string>
+    <string name="kept_view_all">All Kept Photos</string>
+    <string name="kept_view_albums">Kept Photos Albums</string>
+    <string name="kept_reset_all">Restore All Kept Photos?</string>
+    <string name="kept_reset_all_desc">This will clear all your kept photos. They will reappear in your swipe deck from the beginning.</string>
+    <string name="kept_restore_photo_title">Reset Photo?</string>
+    <string name="kept_restore_photo_desc">Do you want to reset this photo? It will be removed from Kept and put back on your swipe deck.</string>
+
+    <!-- Trash Screen -->
+    <string name="trash_title">Trash Queue</string>
+    <string name="trash_empty">Trash is empty.</string>
+    <string name="trash_move_photos">Move %1$d Photos to Trash</string>
+    <string name="trash_restore_title">Restore Photo?</string>
+    <string name="trash_restore_desc">Do you want to restore this photo back to your active swipe deck?</string>
+
+    <!-- Common Actions -->
+    <string name="action_see_kept">See Kept Photos</string>
+    <string name="action_restore">Restore</string>
+    <string name="action_restore_all">Restore All</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_close">✕ Close</string>
+    <string name="action_keep_swiping">Keep Swiping</string>
+    <string name="action_empty_trash">Empty Trash</string>
+
+    <!-- Milestone Dialog -->
+    <string name="milestone_title">Milestone Reached! 🎯</string>
+    <string name="milestone_review_trash">Review Trash (%1$d)</string>
+    <string name="milestone_reset_progress">Reset Progress?</string>
+    <string name="milestone_reset_desc">This will clear all your kept photos. All photos will appear in your swipe session again from the beginning.</string>
+</resources>

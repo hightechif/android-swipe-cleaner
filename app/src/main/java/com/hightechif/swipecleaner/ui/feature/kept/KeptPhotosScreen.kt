@@ -60,25 +60,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import coil.compose.rememberAsyncImagePainter
+import com.hightechif.swipecleaner.ui.theme.SwipeCleanerTheme
 import org.koin.androidx.compose.koinViewModel
 
 enum class KeptPhotosViewMode { ALL_PHOTOS, ALBUMS }
-
-data class ResolvedKeptPhoto(
-    val uri: String,
-    val keptAt: Long,
-    val bucketId: String,
-    val bucketName: String
-)
-
-data class KeptAlbum(
-    val id: String,
-    val name: String,
-    val coverPhotoUri: String,
-    val photoCount: Int,
-    val photos: List<ResolvedKeptPhoto>
-)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -89,7 +76,7 @@ fun KeptPhotosScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val keptPhotos = state.keptPhotos
-    val mediaImages = state.mediaImages
+    val keptAlbums by viewModel.keptAlbums.collectAsStateWithLifecycle()
 
     var keptViewMode by remember { mutableStateOf(KeptPhotosViewMode.ALL_PHOTOS) }
     var selectedAlbumId by remember { mutableStateOf<String?>(null) }
@@ -97,32 +84,6 @@ fun KeptPhotosScreen(
     var showResetAllDialog by remember { mutableStateOf(false) }
     var photoToRestore by remember { mutableStateOf<String?>(null) }
     var activeViewerUri by remember { mutableStateOf<String?>(null) }
-
-    val mediaImagesMap = remember(mediaImages) { mediaImages.associateBy { it.uri } }
-
-    val resolvedKeptPhotos = remember(keptPhotos, mediaImagesMap) {
-        keptPhotos.map { entity ->
-            val mediaImage = mediaImagesMap[entity.uri]
-            ResolvedKeptPhoto(
-                uri = entity.uri,
-                keptAt = entity.keptAt,
-                bucketId = mediaImage?.bucketId ?: "unknown",
-                bucketName = mediaImage?.bucketName ?: "Others"
-            )
-        }
-    }
-
-    val keptAlbums = remember(resolvedKeptPhotos) {
-        resolvedKeptPhotos.groupBy { it.bucketId }.map { (bucketId, photos) ->
-            KeptAlbum(
-                id = bucketId,
-                name = photos.first().bucketName,
-                coverPhotoUri = photos.first().uri,
-                photoCount = photos.size,
-                photos = photos
-            )
-        }.sortedBy { it.name }
-    }
 
     Box(
         modifier = Modifier
@@ -586,5 +547,30 @@ fun FullscreenViewerComp(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun KeptPhotoCardCompPreview() {
+    SwipeCleanerTheme {
+        KeptPhotoCardComp(uri = "", onClick = {}, onLongClick = {})
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun AlbumCardCompPreview() {
+    SwipeCleanerTheme {
+        AlbumCardComp(
+            album = KeptAlbum(
+                id = "1",
+                name = "Camera",
+                coverPhotoUri = "",
+                photoCount = 12,
+                photos = emptyList()
+            ),
+            onClick = {}
+        )
     }
 }

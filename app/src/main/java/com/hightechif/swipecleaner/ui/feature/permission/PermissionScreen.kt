@@ -41,9 +41,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.hightechif.swipecleaner.ui.theme.SwipeCleanerTheme
 
 @Composable
 fun PermissionScreen(
@@ -169,7 +171,7 @@ fun PermissionScreen(
     }
 }
 
-fun hasRequiredPermissions(context: Context): Boolean {
+private fun hasRequiredPermissions(context: Context): Boolean {
     return when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED ||
@@ -181,5 +183,13 @@ fun hasRequiredPermissions(context: Context): Boolean {
         else -> {
             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
         }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun PermissionScreenPreview() {
+    SwipeCleanerTheme {
+        PermissionScreen(onPermissionGranted = {})
     }
 }

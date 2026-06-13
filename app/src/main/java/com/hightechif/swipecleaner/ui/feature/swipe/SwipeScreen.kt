@@ -79,15 +79,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
+import com.hightechif.swipecleaner.ui.theme.SwipeCleanerTheme
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.hightechif.swipecleaner.domain.model.KeptPhoto
-import com.hightechif.swipecleaner.domain.model.MediaImage
 import com.hightechif.swipecleaner.ui.component.SummaryRowComp
+import com.hightechif.swipecleaner.ui.feature.kept.KeptAlbum
 import com.hightechif.swipecleaner.ui.component.SwipeableCardComp
 import org.koin.androidx.compose.koinViewModel
 
@@ -98,6 +100,7 @@ fun SwipeScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val keptPhotos by viewModel.keptPhotos.collectAsStateWithLifecycle()
+    val keptAlbums by viewModel.keptAlbums.collectAsStateWithLifecycle()
 
     val (activeViewerUri, setActiveViewerUri) = remember { mutableStateOf<String?>(null) }
     val (photoToResetFromKept, setPhotoToResetFromKept) = remember { mutableStateOf<String?>(null) }
@@ -566,7 +569,7 @@ fun SwipeScreen(
                 SwipeTab.KEPT -> {
                     KeptTabContentComp(
                         keptPhotos = keptPhotos,
-                        mediaImages = state.mediaImages,
+                        keptAlbums = keptAlbums,
                         onPhotoClick = { setActiveViewerUri(it) },
                         onPhotoLongClick = { setPhotoToResetFromKept(it) },
                         onResetAll = { setShowResetAllKeptDialog(true) }
@@ -708,7 +711,7 @@ fun SessionCompletedViewComp(
     onSeeKept: () -> Unit
 ) {
     val composition by rememberLottieComposition(
-        spec = LottieCompositionSpec.Url("https://assets10.lottiefiles.com/packages/lf20_l4xxtfd3.json")
+        spec = LottieCompositionSpec.RawRes(com.hightechif.swipecleaner.R.raw.completion_animation)
     )
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -822,60 +825,21 @@ fun SessionCompletedViewComp(
 
 enum class KeptViewMode { ALL_PHOTOS, ALBUMS }
 
-data class ResolvedKeptPhoto(
-    val uri: String,
-    val keptAt: Long,
-    val bucketId: String,
-    val bucketName: String
-)
-
-data class KeptAlbum(
-    val id: String,
-    val name: String,
-    val coverPhotoUri: String,
-    val photoCount: Int,
-    val photos: List<ResolvedKeptPhoto>
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KeptTabContentComp(
     keptPhotos: List<KeptPhoto>,
-    mediaImages: List<MediaImage>,
+    keptAlbums: List<KeptAlbum>,
     onPhotoClick: (String) -> Unit,
     onPhotoLongClick: (String) -> Unit,
-    onResetAll: () -> Unit
+    onResetAll: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var keptViewMode by remember { mutableStateOf(KeptViewMode.ALL_PHOTOS) }
     var selectedAlbumId by remember { mutableStateOf<String?>(null) }
     var showViewModeDropdown by remember { mutableStateOf(false) }
 
-    val mediaImagesMap = remember(mediaImages) { mediaImages.associateBy { it.uri } }
-
-    val resolvedKeptPhotos = remember(keptPhotos, mediaImagesMap) {
-        keptPhotos.map { entity ->
-            val mediaImage = mediaImagesMap[entity.uri]
-            ResolvedKeptPhoto(
-                uri = entity.uri, keptAt = entity.keptAt,
-                bucketId = mediaImage?.bucketId ?: "unknown",
-                bucketName = mediaImage?.bucketName ?: "Others"
-            )
-        }
-    }
-
-    val keptAlbums = remember(resolvedKeptPhotos) {
-        resolvedKeptPhotos.groupBy { it.bucketId }.map { (bucketId, photos) ->
-            KeptAlbum(
-                id = bucketId,
-                name = photos.first().bucketName,
-                coverPhotoUri = photos.first().uri,
-                photoCount = photos.size,
-                photos = photos
-            )
-        }.sortedBy { it.name }
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = modifier.fillMaxSize()) {
         Spacer(modifier = Modifier.height(28.dp))
         Row(
             modifier = Modifier
@@ -1277,5 +1241,33 @@ fun FullscreenImageViewerComp(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun EmptySwipeViewCompPreview() {
+    SwipeCleanerTheme {
+        EmptySwipeViewComp(deleteQueueSize = 5, onExecuteTrash = {}, onSeeKept = {})
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun TrashTabContentCompPreview() {
+    SwipeCleanerTheme {
+        TrashTabContentComp(
+            deleteQueue = listOf("uri1", "uri2", "uri3"),
+            onRestorePhoto = {},
+            onExecuteTrash = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun KeptPhotoGridItemCompPreview() {
+    SwipeCleanerTheme {
+        KeptPhotoGridItemComp(uri = "", onClick = {}, onLongClick = {})
     }
 }

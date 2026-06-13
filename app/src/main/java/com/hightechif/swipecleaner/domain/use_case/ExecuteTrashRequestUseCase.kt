@@ -1,7 +1,7 @@
 package com.hightechif.swipecleaner.domain.use_case
 
-import android.content.IntentSender
+import com.hightechif.swipecleaner.domain.model.PendingSystemAction
 
 interface ExecuteTrashRequestUseCase {
-    suspend operator fun invoke(uris: List<String>): IntentSender?
+    suspend operator fun invoke(uris: List<String>): PendingSystemAction
 }

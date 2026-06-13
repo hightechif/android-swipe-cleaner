@@ -31,7 +31,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import coil.compose.rememberAsyncImagePainter
+import com.hightechif.swipecleaner.ui.theme.SwipeCleanerTheme
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.min
@@ -159,5 +161,18 @@ fun SwipeableCardComp(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF0F0F14)
+@Composable
+private fun SwipeableCardCompPreview() {
+    SwipeCleanerTheme {
+        SwipeableCardComp(
+            imageUri = "",
+            onSwipeLeft = {},
+            onSwipeRight = {},
+            onCardClick = {}
+        )
     }
 }

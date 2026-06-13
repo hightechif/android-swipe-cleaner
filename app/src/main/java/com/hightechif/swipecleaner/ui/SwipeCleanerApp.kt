@@ -13,10 +13,10 @@ import com.hightechif.swipecleaner.ui.feature.swipe.SwipeViewModel
 import org.koin.androidx.compose.koinViewModel
 
 sealed class Screen(val route: String) {
-    object Permission : Screen("permission")
-    object Swipe : Screen("swipe")
-    object Completion : Screen("completion")
-    object KeptPhotos : Screen("kept_photos")
+    data object Permission : Screen("permission")
+    data object Swipe : Screen("swipe")
+    data object Completion : Screen("completion")
+    data object KeptPhotos : Screen("kept_photos")
 }
 
 @Composable

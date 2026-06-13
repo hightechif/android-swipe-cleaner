@@ -38,18 +38,17 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.hightechif.swipecleaner.ui.component.SummaryRowComp
 import com.hightechif.swipecleaner.ui.feature.swipe.SwipeViewModel
-import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun CompletionScreen(
     onNavigateToKept: () -> Unit,
     onNavigateToSwipe: () -> Unit,
-    viewModel: SwipeViewModel = koinViewModel()
+    viewModel: SwipeViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     val composition by rememberLottieComposition(
-        spec = LottieCompositionSpec.Url("https://assets10.lottiefiles.com/packages/lf20_l4xxtfd3.json")
+        spec = LottieCompositionSpec.RawRes(com.hightechif.swipecleaner.R.raw.completion_animation)
     )
 
     val trashLauncher = rememberLauncherForActivityResult(
