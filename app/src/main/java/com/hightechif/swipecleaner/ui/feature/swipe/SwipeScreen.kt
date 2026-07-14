@@ -1,6 +1,7 @@
 package com.hightechif.swipecleaner.ui.feature.swipe
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -103,6 +104,10 @@ fun SwipeScreen(
     val keptAlbums by viewModel.keptAlbums.collectAsStateWithLifecycle()
 
     val (activeViewerUri, setActiveViewerUri) = remember { mutableStateOf<String?>(null) }
+
+    BackHandler(enabled = activeViewerUri != null) {
+        setActiveViewerUri(null)
+    }
     val (photoToResetFromKept, setPhotoToResetFromKept) = remember { mutableStateOf<String?>(null) }
     val (photoToRestoreFromTrash, setPhotoToRestoreFromTrash) = remember {
         mutableStateOf<String?>(

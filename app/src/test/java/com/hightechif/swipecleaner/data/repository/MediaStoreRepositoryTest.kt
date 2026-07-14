@@ -1,6 +1,7 @@
 package com.hightechif.swipecleaner.data.repository
 
 import com.google.common.truth.Truth.assertThat
+import com.hightechif.swipecleaner.domain.model.PendingSystemAction
 import com.hightechif.swipecleaner.domain.repository.IMediaStoreRepository
 import io.mockk.MockKAnnotations
 import io.mockk.clearAllMocks
@@ -57,15 +58,16 @@ class MediaStoreRepositoryTest {
     }
 
     @Test
-    fun `createTrashRequest returns null when uri list is empty`() {
+    fun `createTrashRequest returns action with null handle when uri list is empty`() {
         // Arrange
-        every { sut.createTrashRequest(emptyList()) } returns null
+        val expected = PendingSystemAction(null)
+        every { sut.createTrashRequest(emptyList()) } returns expected
 
         // Act
         val result = sut.createTrashRequest(emptyList())
 
         // Assert
-        assertThat(result).isNull()
+        assertThat(result.handle).isNull()
         verify(exactly = 1) { sut.createTrashRequest(emptyList()) }
     }
 }

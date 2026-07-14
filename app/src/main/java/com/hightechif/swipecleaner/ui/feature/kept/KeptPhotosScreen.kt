@@ -1,5 +1,6 @@
 package com.hightechif.swipecleaner.ui.feature.kept
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -84,6 +85,10 @@ fun KeptPhotosScreen(
     var showResetAllDialog by remember { mutableStateOf(false) }
     var photoToRestore by remember { mutableStateOf<String?>(null) }
     var activeViewerUri by remember { mutableStateOf<String?>(null) }
+
+    BackHandler(enabled = activeViewerUri != null) {
+        activeViewerUri = null
+    }
 
     Box(
         modifier = Modifier
