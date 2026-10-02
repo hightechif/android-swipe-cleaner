@@ -1,10 +1,6 @@
 package com.hightechif.swipecleaner.ui.feature.swipe
 
-import android.app.Activity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +24,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -42,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hightechif.swipecleaner.R
+import com.hightechif.swipecleaner.ui.component.TrashRequestEffectComp
 import com.hightechif.swipecleaner.ui.component.AlbumSelectorDialogComp
 import com.hightechif.swipecleaner.ui.component.ConfirmDialogComp
 import com.hightechif.swipecleaner.ui.component.EmptySwipeViewComp
@@ -77,20 +73,10 @@ fun SwipeScreen(
     val (showResetAllKeptDialog, setShowResetAllKeptDialog) = remember { mutableStateOf(false) }
     val (showAlbumSelectorDialog, setShowAlbumSelectorDialog) = remember { mutableStateOf(false) }
 
-    val trashLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.onTrashRequestCompleted()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.trashEvent.collect { intentSender ->
-            val request = IntentSenderRequest.Builder(intentSender).build()
-            trashLauncher.launch(request)
-        }
-    }
+    TrashRequestEffectComp(
+        trashEvents = viewModel.trashEvent,
+        onTrashCompleted = viewModel::onTrashRequestCompleted
+    )
 
     if (showAlbumSelectorDialog) {
         AlbumSelectorDialogComp(

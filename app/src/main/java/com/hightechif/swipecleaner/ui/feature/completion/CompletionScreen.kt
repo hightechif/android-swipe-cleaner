@@ -1,11 +1,5 @@
 package com.hightechif.swipecleaner.ui.feature.completion
 
-import com.hightechif.swipecleaner.R
-import androidx.compose.ui.res.stringResource
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,12 +17,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -38,7 +32,9 @@ import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
+import com.hightechif.swipecleaner.R
 import com.hightechif.swipecleaner.ui.component.SummaryRowComp
+import com.hightechif.swipecleaner.ui.component.TrashRequestEffectComp
 import com.hightechif.swipecleaner.ui.feature.swipe.SwipeViewModel
 
 @Composable
@@ -50,23 +46,13 @@ fun CompletionScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     val composition by rememberLottieComposition(
-        spec = LottieCompositionSpec.RawRes(com.hightechif.swipecleaner.R.raw.completion_animation)
+        spec = LottieCompositionSpec.RawRes(R.raw.completion_animation)
     )
 
-    val trashLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.onTrashRequestCompleted()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.trashEvent.collect { intentSender ->
-            val request = IntentSenderRequest.Builder(intentSender).build()
-            trashLauncher.launch(request)
-        }
-    }
+    TrashRequestEffectComp(
+        trashEvents = viewModel.trashEvent,
+        onTrashCompleted = viewModel::onTrashRequestCompleted
+    )
 
     Box(
         modifier = Modifier
@@ -126,11 +112,22 @@ fun CompletionScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(20.dp))
-                    SummaryRowComp(label = "Total Photos Reviewed", value = state.photoPool.size.toString())
+                    SummaryRowComp(
+                        label = "Total Photos Reviewed",
+                        value = state.photoPool.size.toString()
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
-                    SummaryRowComp(label = "Photos Kept", value = state.keptCount.toString(), color = Color(0xFF4CAF50))
+                    SummaryRowComp(
+                        label = "Photos Kept",
+                        value = state.keptCount.toString(),
+                        color = Color(0xFF4CAF50)
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
-                    SummaryRowComp(label = "Photos Marked for Deletion", value = state.deleteQueue.size.toString(), color = Color(0xFFE91E63))
+                    SummaryRowComp(
+                        label = "Photos Marked for Deletion",
+                        value = state.deleteQueue.size.toString(),
+                        color = Color(0xFFE91E63)
+                    )
                 }
             }
 
@@ -172,7 +169,11 @@ fun CompletionScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    Text(text = stringResource(R.string.action_see_kept), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = stringResource(R.string.action_see_kept),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 OutlinedButton(
@@ -183,7 +184,11 @@ fun CompletionScreen(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                 ) {
-                    Text(text = stringResource(R.string.completion_review_remaining), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = stringResource(R.string.completion_review_remaining),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

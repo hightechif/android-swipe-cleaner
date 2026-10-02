@@ -1,10 +1,10 @@
 package com.hightechif.swipecleaner.ui.feature.swipe
 
-import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hightechif.swipecleaner.domain.model.Album
 import com.hightechif.swipecleaner.domain.model.KeptPhoto
+import com.hightechif.swipecleaner.domain.model.PendingSystemAction
 import com.hightechif.swipecleaner.domain.use_case.AddToTrashUseCase
 import com.hightechif.swipecleaner.domain.use_case.ClearTrashedPhotosUseCase
 import com.hightechif.swipecleaner.domain.use_case.ExecuteTrashRequestUseCase
@@ -58,8 +58,8 @@ class SwipeViewModel(
     private val _state = MutableStateFlow(SwipeScreenState())
     val state: StateFlow<SwipeScreenState> = _state.asStateFlow()
 
-    private val _trashEvent = MutableSharedFlow<IntentSender>()
-    val trashEvent: SharedFlow<IntentSender> = _trashEvent.asSharedFlow()
+    private val _trashEvent = MutableSharedFlow<PendingSystemAction>()
+    val trashEvent: SharedFlow<PendingSystemAction> = _trashEvent.asSharedFlow()
 
     val keptPhotos: StateFlow<List<KeptPhoto>> = getKeptPhotosUseCase()
         .stateIn(
@@ -140,17 +140,7 @@ class SwipeViewModel(
         val currentUri = state.photoPool[state.currentIndex]
         viewModelScope.launch {
             markImageKeptUseCase(currentUri)
-            _state.update {
-                val nextIndex = it.currentIndex + 1
-                val newSwipeCount = it.sessionSwipeCount + 1
-                it.copy(
-                    currentIndex = nextIndex,
-                    keptCount = it.keptCount + 1,
-                    sessionSwipeCount = newSwipeCount,
-                    showMilestoneDialog = newSwipeCount % MILESTONE_CHECKPOINT_NUMBER == 0,
-                    isSessionFinished = nextIndex >= it.photoPool.size
-                )
-            }
+            _state.update { it.advanced().copy(keptCount = it.keptCount + 1) }
             loadMediaImages()
         }
     }
@@ -163,16 +153,7 @@ class SwipeViewModel(
         viewModelScope.launch {
             try {
                 addToTrashUseCase(currentUri)
-                _state.update {
-                    val nextIndex = it.currentIndex + 1
-                    val newSwipeCount = it.sessionSwipeCount + 1
-                    it.copy(
-                        currentIndex = nextIndex,
-                        sessionSwipeCount = newSwipeCount,
-                        showMilestoneDialog = newSwipeCount % MILESTONE_CHECKPOINT_NUMBER == 0,
-                        isSessionFinished = nextIndex >= it.photoPool.size
-                    )
-                }
+                _state.update { it.advanced() }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to swipe left")
             }
@@ -242,8 +223,7 @@ class SwipeViewModel(
     fun executeTrashRequest() {
         viewModelScope.launch {
             val result = executeTrashRequestUseCase(_state.value.deleteQueue)
-            val sender = result.handle as? IntentSender
-            if (sender != null) _trashEvent.emit(sender)
+            if (result.handle != null) _trashEvent.emit(result)
         }
     }
 
@@ -255,5 +235,16 @@ class SwipeViewModel(
                 Timber.e(e, "Failed to clear trashed photos after request")
             }
         }
+    }
+
+    private fun SwipeScreenState.advanced(): SwipeScreenState {
+        val nextIndex = currentIndex + 1
+        val newSwipeCount = sessionSwipeCount + 1
+        return copy(
+            currentIndex = nextIndex,
+            sessionSwipeCount = newSwipeCount,
+            showMilestoneDialog = newSwipeCount % MILESTONE_CHECKPOINT_NUMBER == 0,
+            isSessionFinished = nextIndex >= photoPool.size
+        )
     }
 }

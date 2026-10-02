@@ -84,5 +84,4 @@
     <string name="kept_screen_reset_desc">This will clear all your kept photos. All photos will appear in your swipe session again from the beginning.</string>
     <string name="kept_screen_restore_title">Restore Photo?</string>
     <string name="kept_screen_restore_desc">Do you want to restore this photo? It will be removed from Kept and put back on your swipe deck.</string>
-    <string name="kept_cd_fullscreen">Fullscreen photo</string>
 </resources>

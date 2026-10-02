@@ -27,15 +27,19 @@ class MediaStoreRepository(
             errorMessage = "Failed to query image URIs from bucket $bucketId"
         ) { _, _, uri -> uri }
 
-    override fun queryAllAlbums(): List<Album> {
-        val albumsMap = linkedMapOf<String, AlbumBuilder>()
-        queryAllMediaImages().forEach { image ->
-            albumsMap.getOrPut(image.bucketId) {
-                AlbumBuilder(id = image.bucketId, name = image.bucketName, coverPhotoUri = image.uri)
-            }.count++
-        }
-        return albumsMap.values.map { it.build() }.sortedBy { it.name }
-    }
+    override fun queryAllAlbums(): List<Album> =
+        queryAllMediaImages()
+            .groupBy { it.bucketId }
+            .map { (bucketId, images) ->
+                val cover = images.first()
+                Album(
+                    id = bucketId,
+                    name = cover.bucketName,
+                    coverPhotoUri = cover.uri,
+                    photoCount = images.size
+                )
+            }
+            .sortedBy { it.name }
 
     override fun queryAllMediaImages(): List<MediaImage> =
         queryImages(errorMessage = "Failed to query all media images") { bucketId, bucketName, uri ->
@@ -117,13 +121,4 @@ class MediaStoreRepository(
     } else {
         MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     }
-}
-
-private class AlbumBuilder(
-    val id: String,
-    val name: String,
-    val coverPhotoUri: String,
-    var count: Int = 0
-) {
-    fun build() = Album(id, name, coverPhotoUri, count)
 }
