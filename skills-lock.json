@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "android-guide": {
+      "source": "hightechif/android-guide",
+      "sourceType": "github",
+      "skillPath": "skills/android-guide/SKILL.md",
+      "computedHash": "68af5ee89263aecb89b80f6fe4ade88e6e6e20ecd804d06f7d1a9abc77b10a65"
+    }
+  }
+}
