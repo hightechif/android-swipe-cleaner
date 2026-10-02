@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hightechif.swipecleaner.domain.model.Album
 import com.hightechif.swipecleaner.domain.model.KeptPhoto
-import com.hightechif.swipecleaner.domain.model.MediaImage
 import com.hightechif.swipecleaner.domain.use_case.AddToTrashUseCase
 import com.hightechif.swipecleaner.domain.use_case.ClearTrashedPhotosUseCase
 import com.hightechif.swipecleaner.domain.use_case.ExecuteTrashRequestUseCase
@@ -20,6 +19,8 @@ import com.hightechif.swipecleaner.domain.use_case.RestoreFromKeptUseCase
 import com.hightechif.swipecleaner.domain.use_case.RestoreFromTrashUseCase
 import com.hightechif.swipecleaner.ui.feature.kept.KeptAlbum
 import com.hightechif.swipecleaner.ui.feature.kept.ResolvedKeptPhoto
+import com.hightechif.swipecleaner.ui.feature.kept.toKeptAlbums
+import com.hightechif.swipecleaner.ui.feature.kept.toResolved
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -33,25 +34,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
-
-enum class SwipeTab {
-    SWIPE, KEPT, TRASH
-}
-
-data class SwipeScreenState(
-    val photoPool: List<String> = emptyList(),
-    val currentIndex: Int = 0,
-    val deleteQueue: List<String> = emptyList(),
-    val keptCount: Int = 0,
-    val isLoading: Boolean = true,
-    val isSessionFinished: Boolean = false,
-    val activeTab: SwipeTab = SwipeTab.SWIPE,
-    val sessionSwipeCount: Int = 0,
-    val showMilestoneDialog: Boolean = false,
-    val albums: List<Album> = emptyList(),
-    val selectedAlbum: Album? = null,
-    val mediaImages: List<MediaImage> = emptyList()
-)
 
 class SwipeViewModel(
     private val getShuffledPhotoPoolUseCase: GetShuffledPhotoPoolUseCase,
@@ -70,6 +52,7 @@ class SwipeViewModel(
 
     companion object {
         private const val MILESTONE_CHECKPOINT_NUMBER = 50
+        private const val STOP_TIMEOUT_MILLIS = 5_000L
     }
 
     private val _state = MutableStateFlow(SwipeScreenState())
@@ -81,32 +64,19 @@ class SwipeViewModel(
     val keptPhotos: StateFlow<List<KeptPhoto>> = getKeptPhotosUseCase()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
+            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
             initialValue = emptyList()
         )
 
     val resolvedKeptPhotos: StateFlow<List<ResolvedKeptPhoto>> = combine(
         keptPhotos,
         _state.map { it.mediaImages }
-    ) { kept, mediaImages ->
-        val mediaMap = mediaImages.associateBy { it.uri }
-        kept.map { k ->
-            val m = mediaMap[k.uri]
-            ResolvedKeptPhoto(k.uri, k.keptAt, m?.bucketId ?: "unknown", m?.bucketName ?: "Others")
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    ) { kept, mediaImages -> kept.toResolved(mediaImages) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
-    val keptAlbums: StateFlow<List<KeptAlbum>> = resolvedKeptPhotos.map { photos ->
-        photos.groupBy { it.bucketId }.map { (bucketId, albumPhotos) ->
-            KeptAlbum(
-                id = bucketId,
-                name = albumPhotos.first().bucketName,
-                coverPhotoUri = albumPhotos.first().uri,
-                photoCount = albumPhotos.size,
-                photos = albumPhotos
-            )
-        }.sortedBy { it.name }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val keptAlbums: StateFlow<List<KeptAlbum>> = resolvedKeptPhotos
+        .map { it.toKeptAlbums() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     init {
         viewModelScope.launch {

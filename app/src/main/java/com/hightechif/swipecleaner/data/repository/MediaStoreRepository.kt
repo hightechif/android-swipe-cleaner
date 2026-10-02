@@ -11,122 +11,71 @@ import com.hightechif.swipecleaner.domain.model.PendingSystemAction
 import com.hightechif.swipecleaner.domain.repository.IMediaStoreRepository
 import timber.log.Timber
 
+private const val UNKNOWN_ALBUM_NAME = "Unknown"
+
 class MediaStoreRepository(
     private val context: Context
 ) : IMediaStoreRepository {
 
-    override fun queryAllImageUris(): List<String> {
-        val uriList = mutableListOf<String>()
-        val collection = mediaCollection()
+    override fun queryAllImageUris(): List<String> =
+        queryImages(errorMessage = "Failed to query all image URIs") { _, _, uri -> uri }
 
-        val projection = arrayOf(MediaStore.Images.Media._ID)
-        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+    override fun queryImageUrisFromBucket(bucketId: String): List<String> =
+        queryImages(
+            selection = "${MediaStore.Images.Media.BUCKET_ID} = ?",
+            selectionArgs = arrayOf(bucketId),
+            errorMessage = "Failed to query image URIs from bucket $bucketId"
+        ) { _, _, uri -> uri }
 
-        try {
-            context.contentResolver.query(collection, projection, null, null, sortOrder)?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(idColumn)
-                    uriList.add(Uri.withAppendedPath(collection, id.toString()).toString())
-                }
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to query all image URIs")
+    override fun queryAllAlbums(): List<Album> {
+        val albumsMap = linkedMapOf<String, AlbumBuilder>()
+        queryAllMediaImages().forEach { image ->
+            albumsMap.getOrPut(image.bucketId) {
+                AlbumBuilder(id = image.bucketId, name = image.bucketName, coverPhotoUri = image.uri)
+            }.count++
         }
-
-        return uriList
+        return albumsMap.values.map { it.build() }.sortedBy { it.name }
     }
 
-    override fun queryImageUrisFromBucket(bucketId: String): List<String> {
-        val uriList = mutableListOf<String>()
-        val collection = mediaCollection()
+    override fun queryAllMediaImages(): List<MediaImage> =
+        queryImages(errorMessage = "Failed to query all media images") { bucketId, bucketName, uri ->
+            bucketId?.let { MediaImage(uri, it, bucketName) }
+        }
 
-        val projection = arrayOf(MediaStore.Images.Media._ID)
-        val selection = "${MediaStore.Images.Media.BUCKET_ID} = ?"
-        val selectionArgs = arrayOf(bucketId)
+    private fun <T : Any> queryImages(
+        selection: String? = null,
+        selectionArgs: Array<String>? = null,
+        errorMessage: String,
+        transform: (bucketId: String?, bucketName: String, uri: String) -> T?
+    ): List<T> {
+        val results = mutableListOf<T>()
+        val collection = mediaCollection()
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.BUCKET_ID,
+            MediaStore.Images.Media.BUCKET_DISPLAY_NAME
+        )
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         try {
             context.contentResolver.query(collection, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(idColumn)
-                    uriList.add(Uri.withAppendedPath(collection, id.toString()).toString())
-                }
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to query image URIs from bucket $bucketId")
-        }
-
-        return uriList
-    }
-
-    override fun queryAllAlbums(): List<Album> {
-        val albumsMap = mutableMapOf<String, AlbumBuilder>()
-        val collection = mediaCollection()
-
-        val projection = arrayOf(
-            MediaStore.Images.Media._ID,
-            MediaStore.Images.Media.BUCKET_ID,
-            MediaStore.Images.Media.BUCKET_DISPLAY_NAME
-        )
-        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
-
-        try {
-            context.contentResolver.query(collection, projection, null, null, sortOrder)?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
                 val bucketIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
                 val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
 
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
-                    val bucketId = cursor.getString(bucketIdColumn) ?: continue
-                    val bucketName = cursor.getString(bucketNameColumn) ?: "Unknown"
+                    val bucketId = cursor.getString(bucketIdColumn)
+                    val bucketName = cursor.getString(bucketNameColumn) ?: UNKNOWN_ALBUM_NAME
                     val uri = Uri.withAppendedPath(collection, id.toString()).toString()
-
-                    val builder = albumsMap.getOrPut(bucketId) {
-                        AlbumBuilder(id = bucketId, name = bucketName, coverPhotoUri = uri)
-                    }
-                    builder.count++
+                    transform(bucketId, bucketName, uri)?.let(results::add)
                 }
             }
         } catch (e: Exception) {
-            Timber.e(e, "Failed to query all albums")
+            Timber.e(e, errorMessage)
         }
 
-        return albumsMap.values.map { it.build() }.sortedBy { it.name }
-    }
-
-    override fun queryAllMediaImages(): List<MediaImage> {
-        val imagesList = mutableListOf<MediaImage>()
-        val collection = mediaCollection()
-
-        val projection = arrayOf(
-            MediaStore.Images.Media._ID,
-            MediaStore.Images.Media.BUCKET_ID,
-            MediaStore.Images.Media.BUCKET_DISPLAY_NAME
-        )
-        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
-
-        try {
-            context.contentResolver.query(collection, projection, null, null, sortOrder)?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                val bucketIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
-                val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(idColumn)
-                    val bucketId = cursor.getString(bucketIdColumn) ?: continue
-                    val bucketName = cursor.getString(bucketNameColumn) ?: "Unknown"
-                    val uri = Uri.withAppendedPath(collection, id.toString()).toString()
-                    imagesList.add(MediaImage(uri, bucketId, bucketName))
-                }
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to query all media images")
-        }
-
-        return imagesList
+        return results
     }
 
     override fun createTrashRequest(uris: List<String>): PendingSystemAction {
