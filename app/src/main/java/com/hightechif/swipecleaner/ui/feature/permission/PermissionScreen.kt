@@ -1,5 +1,7 @@
 package com.hightechif.swipecleaner.ui.feature.permission
 
+import com.hightechif.swipecleaner.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -123,7 +125,7 @@ fun PermissionScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PhotoLibrary,
-                                contentDescription = "Gallery Icon",
+                                contentDescription = stringResource(R.string.permission_cd_icon),
                                 tint = Color.White,
                                 modifier = Modifier.size(40.dp)
                             )
@@ -132,7 +134,7 @@ fun PermissionScreen(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Text(
-                            text = "Gallery Access Required",
+                            text = stringResource(R.string.permission_title),
                             color = Color.White,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
@@ -142,7 +144,7 @@ fun PermissionScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "SwipeCleaner needs access to your gallery to show your photos randomly and let you clean them up.",
+                            text = stringResource(R.string.permission_description),
                             color = Color.LightGray,
                             fontSize = 15.sp,
                             textAlign = TextAlign.Center,
@@ -162,7 +164,7 @@ fun PermissionScreen(
                                 contentColor = Color.White
                             )
                         ) {
-                            Text(text = "Allow Access", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(text = stringResource(R.string.permission_allow), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

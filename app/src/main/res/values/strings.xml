@@ -62,4 +62,27 @@
     <string name="milestone_review_trash">Review Trash (%1$d)</string>
     <string name="milestone_reset_progress">Reset Progress?</string>
     <string name="milestone_reset_desc">This will clear all your kept photos. All photos will appear in your swipe session again from the beginning.</string>
+
+    <!-- Added during UI string extraction -->
+    <string name="action_back">Back</string>
+    <string name="action_close_plain">Close</string>
+    <string name="album_photo_count">%1$d photos</string>
+    <string name="milestone_desc">You have swiped %1$d photos in this session. Would you like to review them now or empty your trash?</string>
+    <string name="kept_cd_select_view_mode">Select View Mode</string>
+    <string name="kept_cd_restore_all">Restore All Kept</string>
+    <string name="kept_cd_photo">Kept Photo</string>
+    <string name="kept_empty_short">No kept photos yet.</string>
+    <string name="kept_back_to_albums">Back to Albums (%1$s)</string>
+    <string name="trash_cd_photo">Trash Photo</string>
+    <string name="viewer_cd_photo">Fullscreen detailed photo</string>
+    <string name="swipe_cd_photo">Gallery photo</string>
+    <string name="swipe_cd_keep">Keep Action</string>
+    <string name="swipe_cd_delete">Delete Action</string>
+    <string name="permission_cd_icon">Gallery Icon</string>
+    <string name="kept_cd_reset_progress">Reset Progress</string>
+    <string name="kept_screen_reset_title">Reset Progress?</string>
+    <string name="kept_screen_reset_desc">This will clear all your kept photos. All photos will appear in your swipe session again from the beginning.</string>
+    <string name="kept_screen_restore_title">Restore Photo?</string>
+    <string name="kept_screen_restore_desc">Do you want to restore this photo? It will be removed from Kept and put back on your swipe deck.</string>
+    <string name="kept_cd_fullscreen">Fullscreen photo</string>
 </resources>

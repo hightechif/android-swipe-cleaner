@@ -1,5 +1,7 @@
 package com.hightechif.swipecleaner.ui.component
 
+import com.hightechif.swipecleaner.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
@@ -99,7 +101,7 @@ fun SwipeableCardComp(
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
                 painter = rememberAsyncImagePainter(model = imageUri),
-                contentDescription = "Gallery photo",
+                contentDescription = stringResource(R.string.swipe_cd_photo),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
@@ -124,7 +126,7 @@ fun SwipeableCardComp(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
-                            contentDescription = "Keep Action",
+                            contentDescription = stringResource(R.string.swipe_cd_keep),
                             tint = Color(0xFF4CAF50),
                             modifier = Modifier.graphicsLayer {
                                 val iconScale = 1f + dragPercentage * 0.5f
@@ -149,7 +151,7 @@ fun SwipeableCardComp(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Action",
+                            contentDescription = stringResource(R.string.swipe_cd_delete),
                             tint = Color(0xFFE91E63),
                             modifier = Modifier.graphicsLayer {
                                 val iconScale = 1f + dragPercentage * 0.5f

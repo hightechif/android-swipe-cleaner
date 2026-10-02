@@ -1,5 +1,7 @@
 package com.hightechif.swipecleaner.ui.feature.kept
 
+import com.hightechif.swipecleaner.R
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -113,7 +115,7 @@ fun KeptPhotosScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.action_back),
                         tint = Color.White
                     )
                 }
@@ -125,7 +127,7 @@ fun KeptPhotosScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Kept Photos",
+                        text = stringResource(R.string.kept_title),
                         color = Color.White,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
@@ -149,7 +151,7 @@ fun KeptPhotosScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "Select View Mode",
+                                contentDescription = stringResource(R.string.kept_cd_select_view_mode),
                                 tint = Color.LightGray,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -196,7 +198,7 @@ fun KeptPhotosScreen(
                     IconButton(onClick = { showResetAllDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.DeleteSweep,
-                            contentDescription = "Reset Progress",
+                            contentDescription = stringResource(R.string.kept_cd_reset_progress),
                             tint = Color(0xFFE91E63)
                         )
                     }
@@ -215,14 +217,14 @@ fun KeptPhotosScreen(
                         modifier = Modifier.padding(32.dp)
                     ) {
                         Text(
-                            text = "No Kept Photos Yet",
+                            text = stringResource(R.string.kept_no_photos_title),
                             color = Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Photos you swipe right will show up here.",
+                            text = stringResource(R.string.kept_no_photos_desc),
                             color = Color.LightGray,
                             fontSize = 14.sp,
                             textAlign = TextAlign.Center
@@ -285,13 +287,13 @@ fun KeptPhotosScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.ArrowBack,
-                                            contentDescription = "Back",
+                                            contentDescription = stringResource(R.string.action_back),
                                             tint = Color(0xFF6C63FF),
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "Back to Albums (${activeAlbum.name})",
+                                            text = stringResource(R.string.kept_back_to_albums, activeAlbum.name),
                                             color = Color(0xFF6C63FF),
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp
@@ -331,14 +333,14 @@ fun KeptPhotosScreen(
                 containerColor = Color(0xFF252538),
                 title = {
                     Text(
-                        text = "Reset Progress?",
+                        text = stringResource(R.string.kept_screen_reset_title),
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 text = {
                     Text(
-                        text = "This will clear all your kept photos. All photos will appear in your swipe session again from the beginning.",
+                        text = stringResource(R.string.kept_screen_reset_desc),
                         color = Color.LightGray,
                         fontSize = 14.sp
                     )
@@ -350,7 +352,7 @@ fun KeptPhotosScreen(
                             showResetAllDialog = false
                             viewModel.resetProgress { onResetComplete() }
                         }
-                    ) { Text("Reset", color = Color.White) }
+                    ) { Text(stringResource(R.string.action_reset), color = Color.White) }
                 },
                 dismissButton = {
                     TextButton(onClick = { showResetAllDialog = false }) {
@@ -369,14 +371,14 @@ fun KeptPhotosScreen(
                 containerColor = Color(0xFF252538),
                 title = {
                     Text(
-                        text = "Restore Photo?",
+                        text = stringResource(R.string.kept_screen_restore_title),
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 text = {
                     Text(
-                        text = "Do you want to restore this photo? It will be removed from Kept and put back on your swipe deck.",
+                        text = stringResource(R.string.kept_screen_restore_desc),
                         color = Color.LightGray,
                         fontSize = 14.sp
                     )
@@ -389,7 +391,7 @@ fun KeptPhotosScreen(
                             if (uri != null) viewModel.restoreKeptPhoto(uri)
                             photoToRestore = null
                         }
-                    ) { Text("Restore", color = Color.White) }
+                    ) { Text(stringResource(R.string.action_restore), color = Color.White) }
                 },
                 dismissButton = {
                     TextButton(onClick = { photoToRestore = null }) {
@@ -422,7 +424,7 @@ fun KeptPhotoCardComp(
     ) {
         Image(
             painter = rememberAsyncImagePainter(model = uri),
-            contentDescription = "Kept Photo",
+            contentDescription = stringResource(R.string.kept_cd_photo),
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
@@ -518,7 +520,7 @@ fun FullscreenViewerComp(
     ) {
         Image(
             painter = rememberAsyncImagePainter(model = imageUri),
-            contentDescription = "Fullscreen photo",
+            contentDescription = stringResource(R.string.kept_cd_fullscreen),
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
@@ -545,7 +547,7 @@ fun FullscreenViewerComp(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
-                    text = "✕ Close",
+                    text = stringResource(R.string.action_close),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp

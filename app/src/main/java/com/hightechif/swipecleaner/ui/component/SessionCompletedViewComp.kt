@@ -1,12 +1,5 @@
-package com.hightechif.swipecleaner.ui.feature.completion
+package com.hightechif.swipecleaner.ui.component
 
-import com.hightechif.swipecleaner.R
-import androidx.compose.ui.res.stringResource
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,62 +13,37 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
+import com.hightechif.swipecleaner.R
 import com.hightechif.swipecleaner.ui.component.SummaryRowComp
-import com.hightechif.swipecleaner.ui.feature.swipe.SwipeViewModel
 
 @Composable
-fun CompletionScreen(
-    onNavigateToKept: () -> Unit,
-    onNavigateToSwipe: () -> Unit,
-    viewModel: SwipeViewModel
+fun SessionCompletedViewComp(
+    totalPoolSize: Int,
+    keptCount: Int,
+    deleteQueueSize: Int,
+    onExecuteTrash: () -> Unit,
+    onSeeKept: () -> Unit
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-
     val composition by rememberLottieComposition(
-        spec = LottieCompositionSpec.RawRes(com.hightechif.swipecleaner.R.raw.completion_animation)
+        spec = LottieCompositionSpec.RawRes(R.raw.completion_animation)
     )
 
-    val trashLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.onTrashRequestCompleted()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.trashEvent.collect { intentSender ->
-            val request = IntentSenderRequest.Builder(intentSender).build()
-            trashLauncher.launch(request)
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(colors = listOf(Color(0xFF1E1E2C), Color(0xFF0F0F14)))
-            ),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         LottieAnimation(
             composition = composition,
             iterations = LottieConstants.IterateForever,
@@ -86,7 +54,7 @@ fun CompletionScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -97,16 +65,13 @@ fun CompletionScreen(
                 fontWeight = FontWeight.Black,
                 textAlign = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = stringResource(R.string.completion_subtitle),
                 color = Color.LightGray,
                 fontSize = 16.sp,
                 textAlign = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(32.dp))
 
             Card(
@@ -126,11 +91,22 @@ fun CompletionScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(20.dp))
-                    SummaryRowComp(label = "Total Photos Reviewed", value = state.photoPool.size.toString())
+                    SummaryRowComp(
+                        label = stringResource(R.string.completion_total_reviewed),
+                        value = totalPoolSize.toString()
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
-                    SummaryRowComp(label = "Photos Kept", value = state.keptCount.toString(), color = Color(0xFF4CAF50))
+                    SummaryRowComp(
+                        label = stringResource(R.string.completion_photos_kept),
+                        value = keptCount.toString(),
+                        color = Color(0xFF4CAF50)
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
-                    SummaryRowComp(label = "Photos Marked for Deletion", value = state.deleteQueue.size.toString(), color = Color(0xFFE91E63))
+                    SummaryRowComp(
+                        label = stringResource(R.string.completion_photos_for_deletion),
+                        value = deleteQueueSize.toString(),
+                        color = Color(0xFFE91E63)
+                    )
                 }
             }
 
@@ -141,28 +117,25 @@ fun CompletionScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { viewModel.executeTrashRequest() },
-                    enabled = state.deleteQueue.isNotEmpty(),
+                    onClick = onExecuteTrash,
+                    enabled = deleteQueueSize > 0,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE91E63),
-                        contentColor = Color.White,
+                        containerColor = Color(0xFFE91E63), contentColor = Color.White,
                         disabledContainerColor = Color(0xFFE91E63).copy(alpha = 0.3f),
                         disabledContentColor = Color.White.copy(alpha = 0.5f)
                     )
                 ) {
                     Text(
-                        text = if (state.deleteQueue.isNotEmpty()) "Move ${state.deleteQueue.size} Photos to Trash" else "No Photos to Delete",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        text = if (deleteQueueSize > 0) stringResource(R.string.trash_move_photos, deleteQueueSize) else stringResource(R.string.empty_no_photos_to_delete),
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold
                     )
                 }
-
                 Button(
-                    onClick = onNavigateToKept,
+                    onClick = onSeeKept,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -172,18 +145,7 @@ fun CompletionScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    Text(text = stringResource(R.string.action_see_kept), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-
-                OutlinedButton(
-                    onClick = onNavigateToSwipe,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                ) {
-                    Text(text = stringResource(R.string.completion_review_remaining), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.action_see_kept), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
