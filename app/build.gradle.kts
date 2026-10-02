@@ -58,6 +58,26 @@ android {
     }
 }
 
+// Android Studio's "Run with Coverage" (IntelliJ runner) instruments every loaded class, including the
+// Android framework classes Robolectric rewrites in its sandbox, which fails with
+// "VerifyError: Bad return type" in all Robolectric tests. Keep those packages out of the agent.
+val coverageAgentExcludes = listOf("android\\..*", "androidx\\..*", "org\\.robolectric\\..*", "sun\\..*", "jdk\\..*")
+tasks.withType<Test>().configureEach {
+    doFirst {
+        val argsFile = jvmArgs.orEmpty()
+            .firstOrNull { it.startsWith("-javaagent:") && it.contains("coverage") }
+            ?.substringAfterLast("=")
+            ?.let(::File)
+            ?.takeIf { it.isFile }
+            ?: return@doFirst
+        val lines = argsFile.readLines()
+        if ("-exclude" in lines) return@doFirst
+        val annotationsFlag = lines.indexOf("-excludeAnnotations").takeIf { it >= 0 } ?: lines.size
+        val patched = lines.take(annotationsFlag) + "-exclude" + coverageAgentExcludes + lines.drop(annotationsFlag)
+        argsFile.writeText(patched.joinToString("\n", postfix = "\n"))
+    }
+}
+
 dependencies {
     // AndroidX Core & AppCompat
     implementation("androidx.core:core-ktx:1.12.0")
@@ -116,4 +136,11 @@ dependencies {
     testImplementation("androidx.room:room-testing:$roomVersion")
     testImplementation("androidx.test:core:1.5.0")
     testImplementation("com.google.truth:truth:1.4.2")
+
+    // UI Testing
+    androidTestImplementation(composeBom)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("com.google.truth:truth:1.4.2")
 }

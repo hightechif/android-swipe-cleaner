@@ -135,4 +135,18 @@ class TrashViewModelTest {
         // Assert
         assertThat(restored).isFalse()
     }
+
+    @Test
+    fun `onTrashRequestCompleted does not crash when clearing fails`() = runTest {
+        // Arrange
+        coEvery { clearTrashedPhotosUseCase() } throws IllegalStateException("boom")
+
+        // Act
+        sut.onTrashRequestCompleted()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify(exactly = 1) { clearTrashedPhotosUseCase() }
+        assertThat(sut.state.value.deleteQueue).containsExactly("u1", "u2")
+    }
 }

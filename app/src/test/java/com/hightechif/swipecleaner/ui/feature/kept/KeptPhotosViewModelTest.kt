@@ -143,4 +143,18 @@ class KeptPhotosViewModelTest {
         // Assert
         assertThat(completed).isFalse()
     }
+
+    @Test
+    fun `restoreKeptPhoto skips callback when restore fails`() = runTest {
+        // Arrange
+        coEvery { restoreFromKeptUseCase(any()) } throws IllegalStateException("boom")
+        var restored = false
+
+        // Act
+        sut.restoreKeptPhoto("content://media/1") { restored = true }
+        advanceUntilIdle()
+
+        // Assert
+        assertThat(restored).isFalse()
+    }
 }

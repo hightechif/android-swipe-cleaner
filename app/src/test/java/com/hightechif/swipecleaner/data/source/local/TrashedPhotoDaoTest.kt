@@ -68,6 +68,8 @@ class TrashedPhotoDaoTest {
 
     @Test
     fun `getAll returns empty list when table is empty`() = runTest {
+        // Arrange -> empty table from setUp
+
         // Act
         val result = sut.getAllTrashedPhotos()
 

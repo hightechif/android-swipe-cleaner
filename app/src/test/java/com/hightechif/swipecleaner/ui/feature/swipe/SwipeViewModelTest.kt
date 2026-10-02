@@ -1,6 +1,7 @@
 package com.hightechif.swipecleaner.ui.feature.swipe
 
 import com.google.common.truth.Truth.assertThat
+import com.hightechif.swipecleaner.domain.model.Album
 import com.hightechif.swipecleaner.domain.use_case.AddToTrashUseCase
 import com.hightechif.swipecleaner.domain.use_case.GetAllMediaImagesUseCase
 import com.hightechif.swipecleaner.domain.use_case.GetFilteredAlbumsUseCase
@@ -243,5 +244,78 @@ class SwipeViewModelTest {
 
         // Assert
         assertThat(sut.state.value.isLoading).isFalse()
+    }
+
+    @Test
+    fun `loadPhotoPool marks session finished when pool is empty`() = runTest {
+        // Arrange
+        coEvery { getShuffledPhotoPoolUseCase(any()) } returns emptyList()
+
+        // Act
+        sut = buildSut()
+        advanceUntilIdle()
+
+        // Assert
+        assertThat(sut.state.value.isSessionFinished).isTrue()
+        assertThat(sut.state.value.isLoading).isFalse()
+    }
+
+    @Test
+    fun `loadPhotoPool stops loading when use case throws`() = runTest {
+        // Arrange
+        coEvery { getShuffledPhotoPoolUseCase(any()) } throws IllegalStateException("boom")
+
+        // Act
+        sut = buildSut()
+        advanceUntilIdle()
+
+        // Assert
+        assertThat(sut.state.value.isLoading).isFalse()
+        assertThat(sut.state.value.photoPool).isEmpty()
+    }
+
+    @Test
+    fun `selectAlbum reloads pool for the chosen album id`() = runTest {
+        // Arrange
+        advanceUntilIdle()
+        val album = Album(id = "b1", name = "Camera", coverPhotoUri = "c", photoCount = 3)
+
+        // Act
+        sut.selectAlbum(album)
+        advanceUntilIdle()
+
+        // Assert
+        assertThat(sut.state.value.selectedAlbum).isEqualTo(album)
+        coVerify { getShuffledPhotoPoolUseCase("b1") }
+    }
+
+    @Test
+    fun `swipeLeft does not advance when use case throws`() = runTest {
+        // Arrange
+        coEvery { addToTrashUseCase(any()) } throws IllegalStateException("boom")
+        advanceUntilIdle()
+
+        // Act
+        sut.swipeLeft()
+        advanceUntilIdle()
+
+        // Assert
+        assertThat(sut.state.value.currentIndex).isEqualTo(0)
+    }
+
+    @Test
+    fun `swipeRight does nothing when pool is exhausted`() = runTest {
+        // Arrange
+        coEvery { getShuffledPhotoPoolUseCase(any()) } returns emptyList()
+        sut = buildSut()
+        advanceUntilIdle()
+
+        // Act
+        sut.swipeRight()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify(exactly = 0) { markImageKeptUseCase(any()) }
+        assertThat(sut.state.value.keptCount).isEqualTo(0)
     }
 }
