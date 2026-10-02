@@ -2,17 +2,10 @@ package com.hightechif.swipecleaner.ui.feature.swipe
 
 import com.google.common.truth.Truth.assertThat
 import com.hightechif.swipecleaner.domain.use_case.AddToTrashUseCase
-import com.hightechif.swipecleaner.domain.use_case.ClearTrashedPhotosUseCase
-import com.hightechif.swipecleaner.domain.use_case.ExecuteTrashRequestUseCase
 import com.hightechif.swipecleaner.domain.use_case.GetAllMediaImagesUseCase
 import com.hightechif.swipecleaner.domain.use_case.GetFilteredAlbumsUseCase
-import com.hightechif.swipecleaner.domain.use_case.GetKeptPhotosUseCase
 import com.hightechif.swipecleaner.domain.use_case.GetShuffledPhotoPoolUseCase
-import com.hightechif.swipecleaner.domain.use_case.GetTrashedPhotosUseCase
 import com.hightechif.swipecleaner.domain.use_case.MarkImageKeptUseCase
-import com.hightechif.swipecleaner.domain.use_case.ResetKeptPhotosUseCase
-import com.hightechif.swipecleaner.domain.use_case.RestoreFromKeptUseCase
-import com.hightechif.swipecleaner.domain.use_case.RestoreFromTrashUseCase
 import com.hightechif.swipecleaner.util.MainDispatcherRule
 import io.mockk.MockKAnnotations
 import io.mockk.clearAllMocks
@@ -40,14 +33,7 @@ class SwipeViewModelTest {
 
     @MockK lateinit var getShuffledPhotoPoolUseCase: GetShuffledPhotoPoolUseCase
     @MockK lateinit var markImageKeptUseCase: MarkImageKeptUseCase
-    @MockK lateinit var executeTrashRequestUseCase: ExecuteTrashRequestUseCase
-    @MockK lateinit var getKeptPhotosUseCase: GetKeptPhotosUseCase
-    @MockK lateinit var getTrashedPhotosUseCase: GetTrashedPhotosUseCase
     @MockK lateinit var addToTrashUseCase: AddToTrashUseCase
-    @MockK lateinit var restoreFromTrashUseCase: RestoreFromTrashUseCase
-    @MockK lateinit var clearTrashedPhotosUseCase: ClearTrashedPhotosUseCase
-    @MockK lateinit var restoreFromKeptUseCase: RestoreFromKeptUseCase
-    @MockK lateinit var resetKeptPhotosUseCase: ResetKeptPhotosUseCase
     @MockK lateinit var getMediaImagesUseCase: GetAllMediaImagesUseCase
     @MockK lateinit var getFilteredAlbumsUseCase: GetFilteredAlbumsUseCase
 
@@ -62,8 +48,6 @@ class SwipeViewModelTest {
     }
 
     private fun stubDefaults() {
-        every { getKeptPhotosUseCase() } returns flowOf(emptyList())
-        every { getTrashedPhotosUseCase() } returns flowOf(emptyList())
         every { getFilteredAlbumsUseCase(any()) } returns flowOf(emptyList())
         coEvery { getMediaImagesUseCase() } returns emptyList()
         coEvery { getShuffledPhotoPoolUseCase(any()) } returns listOf(
@@ -76,14 +60,7 @@ class SwipeViewModelTest {
     private fun buildSut() = SwipeViewModel(
         getShuffledPhotoPoolUseCase = getShuffledPhotoPoolUseCase,
         markImageKeptUseCase = markImageKeptUseCase,
-        executeTrashRequestUseCase = executeTrashRequestUseCase,
-        getKeptPhotosUseCase = getKeptPhotosUseCase,
-        getTrashedPhotosUseCase = getTrashedPhotosUseCase,
         addToTrashUseCase = addToTrashUseCase,
-        restoreFromTrashUseCase = restoreFromTrashUseCase,
-        clearTrashedPhotosUseCase = clearTrashedPhotosUseCase,
-        restoreFromKeptUseCase = restoreFromKeptUseCase,
-        resetKeptPhotosUseCase = resetKeptPhotosUseCase,
         getMediaImagesUseCase = getMediaImagesUseCase,
         getFilteredAlbumsUseCase = getFilteredAlbumsUseCase
     )
@@ -145,28 +122,56 @@ class SwipeViewModelTest {
     }
 
     @Test
-    fun `restoreFromTrash re-inserts uri back into photo pool`() = runTest {
+    fun `onPhotoRestored re-inserts uri at the current position`() = runTest {
         // Arrange
         coJustRun { addToTrashUseCase(any()) }
-        coJustRun { restoreFromTrashUseCase(any()) }
         advanceUntilIdle()
         sut.swipeLeft()
         advanceUntilIdle()
 
         // Act
-        sut.restoreFromTrash("content://media/1")
-        advanceUntilIdle()
+        sut.onPhotoRestored("content://media/1", wasKept = false)
 
         // Assert
-        assertThat(sut.state.value.photoPool).contains("content://media/1")
+        assertThat(sut.state.value.photoPool[sut.state.value.currentIndex]).isEqualTo("content://media/1")
+        assertThat(sut.state.value.sessionSwipeCount).isEqualTo(0)
     }
 
     @Test
-    fun `restoreFromTrash sets isSessionFinished to false after restoring last photo`() = runTest {
+    fun `onPhotoRestored decrements keptCount only when photo was kept`() = runTest {
+        // Arrange
+        coJustRun { markImageKeptUseCase(any()) }
+        advanceUntilIdle()
+        sut.swipeRight()
+        advanceUntilIdle()
+
+        // Act
+        sut.onPhotoRestored("content://media/1", wasKept = true)
+
+        // Assert
+        assertThat(sut.state.value.keptCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `onPhotoRestored keeps keptCount when photo came from trash`() = runTest {
+        // Arrange
+        coJustRun { markImageKeptUseCase(any()) }
+        advanceUntilIdle()
+        sut.swipeRight()
+        advanceUntilIdle()
+
+        // Act
+        sut.onPhotoRestored("content://media/9", wasKept = false)
+
+        // Assert
+        assertThat(sut.state.value.keptCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `onPhotoRestored sets isSessionFinished to false after restoring last photo`() = runTest {
         // Arrange
         coEvery { getShuffledPhotoPoolUseCase(any()) } returns listOf("content://media/solo")
         coJustRun { addToTrashUseCase(any()) }
-        coJustRun { restoreFromTrashUseCase(any()) }
         sut = buildSut()
         advanceUntilIdle()
         sut.swipeLeft()
@@ -174,11 +179,45 @@ class SwipeViewModelTest {
         assertThat(sut.state.value.isSessionFinished).isTrue()
 
         // Act
-        sut.restoreFromTrash("content://media/solo")
-        advanceUntilIdle()
+        sut.onPhotoRestored("content://media/solo", wasKept = false)
 
         // Assert
         assertThat(sut.state.value.isSessionFinished).isFalse()
+    }
+
+    @Test
+    fun `onAllKeptPhotosReset reloads pool and returns to swipe tab`() = runTest {
+        // Arrange
+        advanceUntilIdle()
+        sut.setActiveTab(SwipeTab.KEPT)
+
+        // Act
+        sut.onAllKeptPhotosReset()
+        advanceUntilIdle()
+
+        // Assert
+        assertThat(sut.state.value.activeTab).isEqualTo(SwipeTab.SWIPE)
+        coVerify(atLeast = 2) { getShuffledPhotoPoolUseCase(any()) }
+    }
+
+    @Test
+    fun `milestone dialog shows on the 50th swipe and can be dismissed`() = runTest {
+        // Arrange
+        coEvery { getShuffledPhotoPoolUseCase(any()) } returns List(60) { "content://media/$it" }
+        coJustRun { addToTrashUseCase(any()) }
+        sut = buildSut()
+        advanceUntilIdle()
+
+        // Act
+        repeat(50) {
+            sut.swipeLeft()
+            advanceUntilIdle()
+        }
+
+        // Assert
+        assertThat(sut.state.value.showMilestoneDialog).isTrue()
+        sut.dismissMilestoneDialog()
+        assertThat(sut.state.value.showMilestoneDialog).isFalse()
     }
 
     @Test

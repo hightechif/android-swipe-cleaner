@@ -6,7 +6,6 @@ import com.hightechif.swipecleaner.domain.model.MediaImage
 data class SwipeScreenState(
     val photoPool: List<String> = emptyList(),
     val currentIndex: Int = 0,
-    val deleteQueue: List<String> = emptyList(),
     val keptCount: Int = 0,
     val isLoading: Boolean = true,
     val isSessionFinished: Boolean = false,

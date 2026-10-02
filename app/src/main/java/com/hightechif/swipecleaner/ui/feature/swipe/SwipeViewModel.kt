@@ -3,34 +3,15 @@ package com.hightechif.swipecleaner.ui.feature.swipe
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hightechif.swipecleaner.domain.model.Album
-import com.hightechif.swipecleaner.domain.model.KeptPhoto
-import com.hightechif.swipecleaner.domain.model.PendingSystemAction
 import com.hightechif.swipecleaner.domain.use_case.AddToTrashUseCase
-import com.hightechif.swipecleaner.domain.use_case.ClearTrashedPhotosUseCase
-import com.hightechif.swipecleaner.domain.use_case.ExecuteTrashRequestUseCase
 import com.hightechif.swipecleaner.domain.use_case.GetAllMediaImagesUseCase
 import com.hightechif.swipecleaner.domain.use_case.GetFilteredAlbumsUseCase
-import com.hightechif.swipecleaner.domain.use_case.GetKeptPhotosUseCase
 import com.hightechif.swipecleaner.domain.use_case.GetShuffledPhotoPoolUseCase
-import com.hightechif.swipecleaner.domain.use_case.GetTrashedPhotosUseCase
 import com.hightechif.swipecleaner.domain.use_case.MarkImageKeptUseCase
-import com.hightechif.swipecleaner.domain.use_case.ResetKeptPhotosUseCase
-import com.hightechif.swipecleaner.domain.use_case.RestoreFromKeptUseCase
-import com.hightechif.swipecleaner.domain.use_case.RestoreFromTrashUseCase
-import com.hightechif.swipecleaner.ui.feature.kept.KeptAlbum
-import com.hightechif.swipecleaner.ui.feature.kept.ResolvedKeptPhoto
-import com.hightechif.swipecleaner.ui.feature.kept.toKeptAlbums
-import com.hightechif.swipecleaner.ui.feature.kept.toResolved
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -38,52 +19,19 @@ import timber.log.Timber
 class SwipeViewModel(
     private val getShuffledPhotoPoolUseCase: GetShuffledPhotoPoolUseCase,
     private val markImageKeptUseCase: MarkImageKeptUseCase,
-    private val executeTrashRequestUseCase: ExecuteTrashRequestUseCase,
-    private val getKeptPhotosUseCase: GetKeptPhotosUseCase,
-    private val getTrashedPhotosUseCase: GetTrashedPhotosUseCase,
     private val addToTrashUseCase: AddToTrashUseCase,
-    private val restoreFromTrashUseCase: RestoreFromTrashUseCase,
-    private val clearTrashedPhotosUseCase: ClearTrashedPhotosUseCase,
-    private val restoreFromKeptUseCase: RestoreFromKeptUseCase,
-    private val resetKeptPhotosUseCase: ResetKeptPhotosUseCase,
     private val getMediaImagesUseCase: GetAllMediaImagesUseCase,
     private val getFilteredAlbumsUseCase: GetFilteredAlbumsUseCase
 ) : ViewModel() {
 
     companion object {
         private const val MILESTONE_CHECKPOINT_NUMBER = 50
-        private const val STOP_TIMEOUT_MILLIS = 5_000L
     }
 
     private val _state = MutableStateFlow(SwipeScreenState())
     val state: StateFlow<SwipeScreenState> = _state.asStateFlow()
 
-    private val _trashEvent = MutableSharedFlow<PendingSystemAction>()
-    val trashEvent: SharedFlow<PendingSystemAction> = _trashEvent.asSharedFlow()
-
-    val keptPhotos: StateFlow<List<KeptPhoto>> = getKeptPhotosUseCase()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-            initialValue = emptyList()
-        )
-
-    val resolvedKeptPhotos: StateFlow<List<ResolvedKeptPhoto>> = combine(
-        keptPhotos,
-        _state.map { it.mediaImages }
-    ) { kept, mediaImages -> kept.toResolved(mediaImages) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
-
-    val keptAlbums: StateFlow<List<KeptAlbum>> = resolvedKeptPhotos
-        .map { it.toKeptAlbums() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
-
     init {
-        viewModelScope.launch {
-            getTrashedPhotosUseCase().collect { photos ->
-                _state.update { it.copy(deleteQueue = photos.map { p -> p.uri }) }
-            }
-        }
         viewModelScope.launch {
             getFilteredAlbumsUseCase(_state.map { it.mediaImages }).collect { albums ->
                 _state.update { it.copy(albums = albums) }
@@ -141,7 +89,6 @@ class SwipeViewModel(
         viewModelScope.launch {
             markImageKeptUseCase(currentUri)
             _state.update { it.advanced().copy(keptCount = it.keptCount + 1) }
-            loadMediaImages()
         }
     }
 
@@ -160,56 +107,26 @@ class SwipeViewModel(
         }
     }
 
-    fun restoreFromTrash(uri: String) {
-        viewModelScope.launch {
-            try {
-                restoreFromTrashUseCase(uri)
-                _state.update { state ->
-                    val newPhotoPool = state.photoPool.toMutableList()
-                    newPhotoPool.add(state.currentIndex.coerceIn(0, newPhotoPool.size), uri)
-                    state.copy(
-                        photoPool = newPhotoPool,
-                        sessionSwipeCount = (state.sessionSwipeCount - 1).coerceAtLeast(0),
-                        isSessionFinished = false
-                    )
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to restore from trash")
-            }
+    /**
+     * Puts a photo that was restored from the trash or kept list back into the deck,
+     * at the current position, so it is reviewed again.
+     */
+    fun onPhotoRestored(uri: String, wasKept: Boolean) {
+        _state.update { state ->
+            val newPhotoPool = state.photoPool.toMutableList()
+            newPhotoPool.add(state.currentIndex.coerceIn(0, newPhotoPool.size), uri)
+            state.copy(
+                photoPool = newPhotoPool,
+                keptCount = if (wasKept) (state.keptCount - 1).coerceAtLeast(0) else state.keptCount,
+                sessionSwipeCount = (state.sessionSwipeCount - 1).coerceAtLeast(0),
+                isSessionFinished = false
+            )
         }
     }
 
-    fun restoreFromKept(uri: String) {
-        viewModelScope.launch {
-            try {
-                restoreFromKeptUseCase(uri)
-                _state.update { state ->
-                    val newPhotoPool = state.photoPool.toMutableList()
-                    newPhotoPool.add(state.currentIndex.coerceIn(0, newPhotoPool.size), uri)
-                    state.copy(
-                        keptCount = (state.keptCount - 1).coerceAtLeast(0),
-                        photoPool = newPhotoPool,
-                        sessionSwipeCount = (state.sessionSwipeCount - 1).coerceAtLeast(0),
-                        isSessionFinished = false
-                    )
-                }
-                loadMediaImages()
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to restore from kept")
-            }
-        }
-    }
-
-    fun resetAllKeptPhotos() {
-        viewModelScope.launch {
-            try {
-                resetKeptPhotosUseCase()
-                loadPhotoPool()
-                _state.update { it.copy(activeTab = SwipeTab.SWIPE) }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to reset all kept photos")
-            }
-        }
+    fun onAllKeptPhotosReset() {
+        loadPhotoPool()
+        _state.update { it.copy(activeTab = SwipeTab.SWIPE) }
     }
 
     fun setActiveTab(tab: SwipeTab) {
@@ -218,23 +135,6 @@ class SwipeViewModel(
 
     fun dismissMilestoneDialog() {
         _state.update { it.copy(showMilestoneDialog = false) }
-    }
-
-    fun executeTrashRequest() {
-        viewModelScope.launch {
-            val result = executeTrashRequestUseCase(_state.value.deleteQueue)
-            if (result.handle != null) _trashEvent.emit(result)
-        }
-    }
-
-    fun onTrashRequestCompleted() {
-        viewModelScope.launch {
-            try {
-                clearTrashedPhotosUseCase()
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to clear trashed photos after request")
-            }
-        }
     }
 
     private fun SwipeScreenState.advanced(): SwipeScreenState {

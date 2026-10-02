@@ -36,22 +36,25 @@ import com.hightechif.swipecleaner.R
 import com.hightechif.swipecleaner.ui.component.SummaryRowComp
 import com.hightechif.swipecleaner.ui.component.TrashRequestEffectComp
 import com.hightechif.swipecleaner.ui.feature.swipe.SwipeViewModel
+import com.hightechif.swipecleaner.ui.feature.trash.TrashViewModel
 
 @Composable
 fun CompletionScreen(
     onNavigateToKept: () -> Unit,
     onNavigateToSwipe: () -> Unit,
-    viewModel: SwipeViewModel
+    viewModel: SwipeViewModel,
+    trashViewModel: TrashViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val trashState by trashViewModel.state.collectAsStateWithLifecycle()
 
     val composition by rememberLottieComposition(
         spec = LottieCompositionSpec.RawRes(R.raw.completion_animation)
     )
 
     TrashRequestEffectComp(
-        trashEvents = viewModel.trashEvent,
-        onTrashCompleted = viewModel::onTrashRequestCompleted
+        trashEvents = trashViewModel.trashEvent,
+        onTrashCompleted = trashViewModel::onTrashRequestCompleted
     )
 
     Box(
@@ -125,7 +128,7 @@ fun CompletionScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     SummaryRowComp(
                         label = "Photos Marked for Deletion",
-                        value = state.deleteQueue.size.toString(),
+                        value = trashState.deleteQueue.size.toString(),
                         color = Color(0xFFE91E63)
                     )
                 }
@@ -138,8 +141,8 @@ fun CompletionScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { viewModel.executeTrashRequest() },
-                    enabled = state.deleteQueue.isNotEmpty(),
+                    onClick = { trashViewModel.executeTrashRequest() },
+                    enabled = trashState.deleteQueue.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -152,7 +155,7 @@ fun CompletionScreen(
                     )
                 ) {
                     Text(
-                        text = if (state.deleteQueue.isNotEmpty()) "Move ${state.deleteQueue.size} Photos to Trash" else "No Photos to Delete",
+                        text = if (trashState.deleteQueue.isNotEmpty()) "Move ${trashState.deleteQueue.size} Photos to Trash" else "No Photos to Delete",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )

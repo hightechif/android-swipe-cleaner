@@ -34,6 +34,7 @@ import com.hightechif.swipecleaner.domain.use_case.RestoreFromTrashInteractor
 import com.hightechif.swipecleaner.domain.use_case.RestoreFromTrashUseCase
 import com.hightechif.swipecleaner.ui.feature.kept.KeptPhotosViewModel
 import com.hightechif.swipecleaner.ui.feature.swipe.SwipeViewModel
+import com.hightechif.swipecleaner.ui.feature.trash.TrashViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
@@ -76,5 +77,6 @@ val appModule = module {
 
     // ViewModels
     viewModelOf(::SwipeViewModel)
+    viewModelOf(::TrashViewModel)
     viewModelOf(::KeptPhotosViewModel)
 }

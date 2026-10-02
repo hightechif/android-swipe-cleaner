@@ -115,4 +115,32 @@ class KeptPhotosViewModelTest {
         // Assert
         coVerify(exactly = 1) { resetKeptPhotosUseCase() }
     }
+
+    @Test
+    fun `restoreKeptPhoto invokes callback after successful restore`() = runTest {
+        // Arrange
+        coJustRun { restoreFromKeptUseCase(any()) }
+        var restored = false
+
+        // Act
+        sut.restoreKeptPhoto("content://media/1") { restored = true }
+        advanceUntilIdle()
+
+        // Assert
+        assertThat(restored).isTrue()
+    }
+
+    @Test
+    fun `resetProgress skips callback when reset fails`() = runTest {
+        // Arrange
+        coEvery { resetKeptPhotosUseCase() } throws IllegalStateException("boom")
+        var completed = false
+
+        // Act
+        sut.resetProgress { completed = true }
+        advanceUntilIdle()
+
+        // Assert
+        assertThat(completed).isFalse()
+    }
 }

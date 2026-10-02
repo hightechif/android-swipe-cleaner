@@ -10,6 +10,7 @@ import com.hightechif.swipecleaner.ui.feature.kept.KeptPhotosScreen
 import com.hightechif.swipecleaner.ui.feature.permission.PermissionScreen
 import com.hightechif.swipecleaner.ui.feature.swipe.SwipeScreen
 import com.hightechif.swipecleaner.ui.feature.swipe.SwipeViewModel
+import com.hightechif.swipecleaner.ui.feature.trash.TrashViewModel
 import org.koin.androidx.compose.koinViewModel
 
 sealed class Screen(val route: String) {
@@ -24,6 +25,7 @@ fun SwipeCleanerApp(
     navController: NavHostController = rememberNavController()
 ) {
     val swipeViewModel: SwipeViewModel = koinViewModel()
+    val trashViewModel: TrashViewModel = koinViewModel()
 
     NavHost(navController = navController, startDestination = Screen.Permission.route) {
         composable(Screen.Permission.route) {
@@ -38,12 +40,13 @@ fun SwipeCleanerApp(
         }
 
         composable(Screen.Swipe.route) {
-            SwipeScreen(viewModel = swipeViewModel)
+            SwipeScreen(viewModel = swipeViewModel, trashViewModel = trashViewModel)
         }
 
         composable(Screen.Completion.route) {
             CompletionScreen(
                 viewModel = swipeViewModel,
+                trashViewModel = trashViewModel,
                 onNavigateToKept = { navController.navigate(Screen.KeptPhotos.route) },
                 onNavigateToSwipe = {
                     swipeViewModel.loadPhotoPool()

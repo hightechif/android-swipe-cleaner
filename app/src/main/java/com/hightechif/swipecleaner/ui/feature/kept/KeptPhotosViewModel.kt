@@ -57,15 +57,20 @@ class KeptPhotosViewModel(
 
     fun resetProgress(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
-            resetKeptPhotosUseCase()
-            onComplete()
+            try {
+                resetKeptPhotosUseCase()
+                onComplete()
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to reset kept photos")
+            }
         }
     }
 
-    fun restoreKeptPhoto(uri: String) {
+    fun restoreKeptPhoto(uri: String, onRestored: () -> Unit = {}) {
         viewModelScope.launch {
             try {
                 restoreFromKeptUseCase(uri)
+                onRestored()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to restore kept photo")
             }

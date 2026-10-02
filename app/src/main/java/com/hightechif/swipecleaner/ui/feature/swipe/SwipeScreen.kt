@@ -48,16 +48,22 @@ import com.hightechif.swipecleaner.ui.component.SessionCompletedViewComp
 import com.hightechif.swipecleaner.ui.component.SwipeBottomBarComp
 import com.hightechif.swipecleaner.ui.component.SwipeContentComp
 import com.hightechif.swipecleaner.ui.component.TrashTabContentComp
+import com.hightechif.swipecleaner.ui.feature.kept.KeptPhotosViewModel
+import com.hightechif.swipecleaner.ui.feature.trash.TrashViewModel
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeScreen(
-    viewModel: SwipeViewModel = koinViewModel()
+    viewModel: SwipeViewModel = koinViewModel(),
+    trashViewModel: TrashViewModel = koinViewModel(),
+    keptViewModel: KeptPhotosViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val keptPhotos by viewModel.keptPhotos.collectAsStateWithLifecycle()
-    val keptAlbums by viewModel.keptAlbums.collectAsStateWithLifecycle()
+    val trashState by trashViewModel.state.collectAsStateWithLifecycle()
+    val keptState by keptViewModel.state.collectAsStateWithLifecycle()
+    val keptPhotos = keptState.keptPhotos
+    val keptAlbums by keptViewModel.keptAlbums.collectAsStateWithLifecycle()
 
     val (activeViewerUri, setActiveViewerUri) = remember { mutableStateOf<String?>(null) }
 
@@ -74,8 +80,8 @@ fun SwipeScreen(
     val (showAlbumSelectorDialog, setShowAlbumSelectorDialog) = remember { mutableStateOf(false) }
 
     TrashRequestEffectComp(
-        trashEvents = viewModel.trashEvent,
-        onTrashCompleted = viewModel::onTrashRequestCompleted
+        trashEvents = trashViewModel.trashEvent,
+        onTrashCompleted = trashViewModel::onTrashRequestCompleted
     )
 
     if (showAlbumSelectorDialog) {
@@ -92,14 +98,14 @@ fun SwipeScreen(
     if (state.showMilestoneDialog) {
         MilestoneDialogComp(
             swipeCount = state.sessionSwipeCount,
-            trashCount = state.deleteQueue.size,
+            trashCount = trashState.deleteQueue.size,
             onReviewTrash = {
                 viewModel.dismissMilestoneDialog()
                 viewModel.setActiveTab(SwipeTab.TRASH)
             },
             onEmptyTrash = {
                 viewModel.dismissMilestoneDialog()
-                viewModel.executeTrashRequest()
+                trashViewModel.executeTrashRequest()
             },
             onDismiss = { viewModel.dismissMilestoneDialog() }
         )
@@ -112,7 +118,9 @@ fun SwipeScreen(
             confirmLabel = stringResource(R.string.action_reset),
             confirmColor = Color(0xFFE91E63),
             onConfirm = {
-                viewModel.restoreFromKept(uri)
+                keptViewModel.restoreKeptPhoto(uri) {
+                    viewModel.onPhotoRestored(uri, wasKept = true)
+                }
                 setPhotoToResetFromKept(null)
             },
             onDismiss = { setPhotoToResetFromKept(null) }
@@ -126,7 +134,9 @@ fun SwipeScreen(
             confirmLabel = stringResource(R.string.action_restore),
             confirmColor = Color(0xFF6C63FF),
             onConfirm = {
-                viewModel.restoreFromTrash(uri)
+                trashViewModel.restoreFromTrash(uri) {
+                    viewModel.onPhotoRestored(uri, wasKept = false)
+                }
                 setPhotoToRestoreFromTrash(null)
             },
             onDismiss = { setPhotoToRestoreFromTrash(null) }
@@ -141,7 +151,7 @@ fun SwipeScreen(
             confirmColor = Color(0xFFE91E63),
             onConfirm = {
                 setShowResetAllKeptDialog(false)
-                viewModel.resetAllKeptPhotos()
+                keptViewModel.resetProgress { viewModel.onAllKeptPhotosReset() }
             },
             onDismiss = { setShowResetAllKeptDialog(false) }
         )
@@ -152,7 +162,7 @@ fun SwipeScreen(
             SwipeBottomBarComp(
                 activeTab = state.activeTab,
                 keptCount = keptPhotos.size,
-                trashCount = state.deleteQueue.size,
+                trashCount = trashState.deleteQueue.size,
                 onTabSelected = viewModel::setActiveTab
             )
         }
@@ -245,8 +255,8 @@ fun SwipeScreen(
 
                                 state.photoPool.isEmpty() -> {
                                     EmptySwipeViewComp(
-                                        deleteQueueSize = state.deleteQueue.size,
-                                        onExecuteTrash = { viewModel.executeTrashRequest() },
+                                        deleteQueueSize = trashState.deleteQueue.size,
+                                        onExecuteTrash = { trashViewModel.executeTrashRequest() },
                                         onSeeKept = { viewModel.setActiveTab(SwipeTab.KEPT) }
                                     )
                                 }
@@ -255,8 +265,8 @@ fun SwipeScreen(
                                     SessionCompletedViewComp(
                                         totalPoolSize = state.photoPool.size,
                                         keptCount = state.keptCount,
-                                        deleteQueueSize = state.deleteQueue.size,
-                                        onExecuteTrash = { viewModel.executeTrashRequest() },
+                                        deleteQueueSize = trashState.deleteQueue.size,
+                                        onExecuteTrash = { trashViewModel.executeTrashRequest() },
                                         onSeeKept = { viewModel.setActiveTab(SwipeTab.KEPT) }
                                     )
                                 }
@@ -287,9 +297,9 @@ fun SwipeScreen(
 
                 SwipeTab.TRASH -> {
                     TrashTabContentComp(
-                        deleteQueue = state.deleteQueue,
+                        deleteQueue = trashState.deleteQueue,
                         onRestorePhoto = { setPhotoToRestoreFromTrash(it) },
-                        onExecuteTrash = { viewModel.executeTrashRequest() }
+                        onExecuteTrash = { trashViewModel.executeTrashRequest() }
                     )
                 }
             }
